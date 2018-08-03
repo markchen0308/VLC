@@ -1,0 +1,14 @@
+{
+  "name": "VLC",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/markchen0308/VLC",
+  "author": "markchen0308 <simonchen0308@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^10.5.5",
+    "child": "^0.0.3",
+    "os": "^0.1.1",
+    "process": "^0.11.10"
+  }
+}
