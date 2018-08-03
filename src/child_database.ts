@@ -1,8 +1,11 @@
 import * as PS from 'process';
+import {PgControl} from './pgControl';
+
+let pg=new PgControl();
 
 PS.on('message',(msg)=>{
 
-    console.log('child database get data from parent:'+msg);
+    console.log('database get data from '+msg);
 })
 
-PS.send('yes');
+PS.send('database');
