@@ -1,5 +1,5 @@
-import { Client, QueryResult } from 'pg'
-
+//import { Client, QueryResult } from 'pg'
+/*
 
 let isDelTable: boolean = false;
 
@@ -115,3 +115,4 @@ export class PgControl {
 }
 
 
+*/

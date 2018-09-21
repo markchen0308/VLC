@@ -25,7 +25,9 @@ class OSControl {
         console.log('totoal memory:' + this.totalMem + 'Mb');
         console.log('free memory:' + this.freeMem + 'Mb');
         console.log('cpu brand:' + this.cpuInfo[0].model + '; cpu core number:' + this.cpuCore);
+        console.log('network infomation:');
         console.log(this.networkInfo);
     }
 }
 exports.OSControl = OSControl;
+//# sourceMappingURL=osControl.js.map

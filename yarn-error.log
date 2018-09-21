@@ -1,0 +1,68 @@
+Arguments: 
+  /usr/bin/node /usr/share/yarn/bin/yarn.js install
+
+PATH: 
+  /usr/local/cuda-9.0/bin:/home/mark/anaconda3/bin:/home/mark/anaconda3/bin:/home/mark/bin:/usr/local/cuda-9.0/bin:/home/mark/anaconda3/bin:/home/mark/anaconda3/bin:/home/mark/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+Yarn version: 
+  1.9.4
+
+Node version: 
+  8.11.1
+
+Platform: 
+  linux x64
+
+Trace: 
+  SyntaxError: /home/mark/prj/nodejs/VLC_Gateway/VLC/package.json: Unexpected token < in JSON at position 381
+      at JSON.parse (<anonymous>)
+      at /usr/share/yarn/lib/cli.js:1130:59
+      at Generator.next (<anonymous>)
+      at step (/usr/share/yarn/lib/cli.js:92:30)
+      at /usr/share/yarn/lib/cli.js:103:13
+      at <anonymous>
+
+npm manifest: 
+  {
+    "name": "VLC",
+    "version": "1.0.0",
+    "main": "index.js",
+    "repository": "https://github.com/markchen0308/VLC",
+    "author": "markchen0308 <simonchen0308@gmail.com>",
+    "license": "MIT",
+    "dependencies": {
+      "@types/body-parser": "^1.17.0",
+      "@types/express": "^4.16.0",
+      "@types/method-override": "^0.0.31",
+      "@types/node": "^10.5.5",
+      "@types/pg": "^7.4.10",
+  <<<<<<< HEAD
+      "@types/serialport": "^6.0.4",
+  =======
+      "body-parser": "^1.18.3",
+  >>>>>>> 82222729a4a84b376c70f6410d89db13e802483c
+      "child": "^0.0.3",
+      "child_process": "^1.0.2",
+      "express": "^4.16.3",
+      "method-override": "^3.0.0",
+      "net": "^1.0.2",
+      "os": "^0.1.1",
+      "pg": "^7.4.3",
+      "process": "^0.11.10",
+  <<<<<<< HEAD
+      "promise": "^8.0.2",
+      "serialport": "^7.0.2"
+  =======
+      "typescript": "^3.0.1"
+    },
+    "scripts": {
+      "tsc": "tsc"
+  >>>>>>> 82222729a4a84b376c70f6410d89db13e802483c
+    }
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
