@@ -15,7 +15,7 @@ class RS485_CONTROL {
 
     constructor() {
 
-        this.checkRS485Device();
+        this.checkRS485Device();//check device is ok
         this.socketRs485CentralClient = new Net.Socket();
         this.socketRs485LocationClient = new Net.Socket();
         this.startPS();//start process control
@@ -31,7 +31,7 @@ class RS485_CONTROL {
         if(rx.stdout.includes(this.rs485DeviceName))
         {
             console.log('ttyUSB0 is exist!');
-            rx= await this.exec('chmod +x /dev/ttyUSB0');
+            rx= await this.exec('chmod +x /dev/ttyUSB0');//set  executable
 
         }
         else
