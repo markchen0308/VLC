@@ -1,3 +1,31 @@
+
+import  ModbusRTU from 'modbus-serial';
+
+//const ModbusRTU=require('modbus-serial');
+
+export class RS485DRIVER{
+    public timeout:number=500;
+    public deviceName: string = '/dev/ttyUSB0';
+    public baudrate:number=115200;
+    public modbus_client:ModbusRTU;
+
+   
+    constructor()
+    {
+       this.modbus_client=new ModbusRTU();
+       this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
+       this.modbus_client.setTimeout(500);//500ms timeout
+    }
+
+    writeModbus(id:number)
+    {
+        this.modbus_client.setID(id);
+        
+    }
+}
+
+
+
 import * as Serialport from 'serialport';;//import serialport module
 //import {TypedEvent} from './typeEvent'
 
