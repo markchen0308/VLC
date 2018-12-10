@@ -11,8 +11,8 @@ class CentralControll {
         this.socketLocation = null;
         this.startPS();
         this.rs485ServerStart(); //start RS485 socket and wait for connection
-        this.webserverStart(); //start webserver socket  and wait for connection
-        this.locationServerStart(); //start location server
+        //  this.webserverStart();//start webserver socket  and wait for connection
+        //  this.locationServerStart();//start location server
     }
     startPS() {
         //msg from main process
