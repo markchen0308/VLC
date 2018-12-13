@@ -11,39 +11,54 @@ export class RS485DRIVER {
 
     public slaveID: number = 3;
     public regStartAddress: number;
+    public registerNum:number;
+    public writeValue:number[];
    
     constructor() {
        
         this.modbus_Master.connectRTU(this.deviceName, { baudRate: this.baudrate })
         //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
         this.setSlave(this.slaveID, this.timeout)
-        this.regStartAddress = 0x01;
+       
        // this.readInputRegisters(this.regStartAddress,3);
        this.testProcess();
     }
 
     testProcess()
     {
+        
         //FC3
+        this.regStartAddress = 0x01;
+        this.registerNum=3;
         setTimeout(()=>{
-            this.readHoldingRegisters(this.regStartAddress,3);
+            this.readHoldingRegisters(this.regStartAddress,this.registerNum);
         },1000);
-/*
-        //FC4
+
+
+        //FC4 
+        this.regStartAddress = 0x1;
+        this.registerNum=3;
         setTimeout(()=>{
-            this.readInputRegisters(this.regStartAddress,3);
+            this.readInputRegisters(this.regStartAddress,this.registerNum=3);
         },2000);
 
          //FC6
+        this.regStartAddress = 0x01;
+        
         setTimeout(()=>{
-            this.writeSingleRegister(this.regStartAddress,0x3456);
+            this.writeSingleRegister(this.regStartAddress,0x3E8);
         },3000);
+
+      */ 
+       
         
         //FC16
+        this.regStartAddress = 0x1;
+
         setTimeout(()=>{
-            this.writeRegisters(this.regStartAddress,[0x1111, 0x2222, 0x3333]);
-        },4000);
-  */      
+            this.writeRegisters(this.regStartAddress,[0x164, 0x165,0x166]);
+        },1000);
+        
     }
 
     setSlave(id: number, timeout: number) {
