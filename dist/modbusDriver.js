@@ -2,19 +2,20 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 //import ModbusRTU from 'modbus-serial';
 //let 
-let ModbusRTU = require('modbus-serial');
-class RS485DRIVER {
+let ModbusSer = require('modbus-serial');
+class ModbusRTU {
     constructor() {
-        this.timeout = 500;
+        this.timeout = 100;
         this.deviceName = '/dev/ttyUSB0';
         this.baudrate = 115200;
-        this.modbus_Master = new ModbusRTU();
-        this.slaveID = 3;
+        this.modbus_Master = new ModbusSer();
+        //set Baudrate
         this.modbus_Master.connectRTU(this.deviceName, { baudRate: this.baudrate });
-        //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
+        //set limitation of response time
         this.modbus_Master.setTimeout(this.timeout);
-        this.setSlave(this.slaveID);
-        this.testProcess();
+        //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
+        //this.setSlave(this.slaveID);
+        // this.testProcess();
     }
     testProcess() {
         //this.writeReadHoldingRegister();
@@ -109,7 +110,7 @@ class RS485DRIVER {
         }, 1000);
     }
 }
-exports.RS485DRIVER = RS485DRIVER;
+exports.ModbusRTU = ModbusRTU;
 /*
 
 import * as Serialport from 'serialport';;//import serialport module

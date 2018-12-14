@@ -4,23 +4,24 @@
 let ModbusSer = require('modbus-serial');
 
 export class ModbusRTU {
-    public timeout: number = 500;
+    public timeout: number = 100;
     public deviceName: string = '/dev/ttyUSB0';
     public baudrate: number = 115200;
     public modbus_Master = new ModbusSer();
 
-    public slaveID: number = 3;
     public regStartAddress: number;
     public registerNum: number;
     public writeValue: number[];
 
     constructor() {
-
+        //set Baudrate
         this.modbus_Master.connectRTU(this.deviceName, { baudRate: this.baudrate })
-        //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
+        //set limitation of response time
         this.modbus_Master.setTimeout(this.timeout);
-        this.setSlave(this.slaveID);
-        this.testProcess();
+
+        //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
+        //this.setSlave(this.slaveID);
+       // this.testProcess();
     }
 
 
