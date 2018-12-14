@@ -1,69 +1,38 @@
 
 //import ModbusRTU from 'modbus-serial';
 //let 
-let ModbusRTU=require('modbus-serial');
+let ModbusSer = require('modbus-serial');
 
-export class RS485DRIVER {
+export class ModbusRTU {
     public timeout: number = 500;
     public deviceName: string = '/dev/ttyUSB0';
     public baudrate: number = 115200;
-    public modbus_Master=new ModbusRTU();
+    public modbus_Master = new ModbusSer();
 
     public slaveID: number = 3;
     public regStartAddress: number;
-    public registerNum:number;
-    public writeValue:number[];
-   
+    public registerNum: number;
+    public writeValue: number[];
+
     constructor() {
-       
+
         this.modbus_Master.connectRTU(this.deviceName, { baudRate: this.baudrate })
         //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
-        this.setSlave(this.slaveID, this.timeout)
-       
-       // this.readInputRegisters(this.regStartAddress,3);
-       this.testProcess();
+        this.modbus_Master.setTimeout(this.timeout);
+        this.setSlave(this.slaveID);
+        this.testProcess();
     }
 
-    testProcess()
-    {
-        
-        //FC3
-        this.regStartAddress = 0x01;
-        this.registerNum=3;
-        setTimeout(()=>{
-            this.readHoldingRegisters(this.regStartAddress,this.registerNum);
-        },1000);
 
 
-        //FC4 
-        this.regStartAddress = 0x1;
-        this.registerNum=3;
-        setTimeout(()=>{
-            this.readInputRegisters(this.regStartAddress,this.registerNum=3);
-        },2000);
-
-         //FC6
-        this.regStartAddress = 0x01;
-        
-        setTimeout(()=>{
-            this.writeSingleRegister(this.regStartAddress,0x3E8);
-        },3000);
-
-      */ 
-       
-        
-        //FC16
-        this.regStartAddress = 0x1;
-
-        setTimeout(()=>{
-            this.writeRegisters(this.regStartAddress,[0x164, 0x165,0x166]);
-        },1000);
-        
+    testProcess() {
+       //this.writeReadHoldingRegister();
+        //this.writeReadHoldingRegisters();
+        this.readInputRegister();
     }
 
-    setSlave(id: number, timeout: number) {
+    setSlave(id: number) {
         this.modbus_Master.setID(id);
-        this.modbus_Master.setTimeout(timeout);
     }
 
     //FC1
@@ -82,7 +51,10 @@ export class RS485DRIVER {
     readHoldingRegisters(startAddress: number, regNum: number) {
         this.modbus_Master.readHoldingRegisters(startAddress, regNum)
             .then((d) => {
-                console.log("received", d.data);
+                console.log("received HoldingRegister", d.data);
+            })
+            .catch((e)=>{
+                console.log(e.message);
             });
     }
 
@@ -90,28 +62,29 @@ export class RS485DRIVER {
     readInputRegisters(startAddress: number, regNum: number) {
         this.modbus_Master.readInputRegisters(startAddress, regNum)
             .then((d) => {
-                console.log("received", d.data);
+                console.log("Received InputRegister", d.data);
+            })
+            .catch((e)=>{
+                console.log(e.message);
             });
     }
 
     //FC6
-    writeSingleRegister(startAddress:number,regValue:number)
-    {
-        this.modbus_Master.writeRegister(startAddress,regValue)
-        .then((d)=>{
-            console.log("write Register",d)
-        })
-        .catch((e)=>
-        {
-            console.log(e.message);
-        })
-    } 
+    writeSingleRegister(startAddress: number, regValue: number) {
+        this.modbus_Master.writeRegister(startAddress, regValue)
+            .then((d) => {
+                console.log("Write Holding Register", d)
+            })
+            .catch((e) => {
+                console.log(e.message);
+            })
+    }
 
     //FC16 
     writeRegisters(startAddress: number, regValues: number[]) {
         this.modbus_Master.writeRegisters(startAddress, regValues)
             .then((d) => {
-                console.log("write Registers", d)
+                console.log("Write Holding Registers", d)
             })
             .catch((e) => {
                 console.log(e.message);
@@ -119,7 +92,50 @@ export class RS485DRIVER {
     }
 
 
+    writeReadHoldingRegister() {
+        //FC6
+        this.regStartAddress = 0x01;
+        this.registerNum = 1;
+        let writeDataByte:number=6789
+        setTimeout(() => {
+            this.writeSingleRegister(this.regStartAddress, writeDataByte);
+        }, 1000);
+
+        //FC3
+        setTimeout(() => {
+            this.readHoldingRegisters(this.regStartAddress, this.registerNum);
+        }, 2000);
+    }
+
+
+    writeReadHoldingRegisters() {
+        //FC16
+        this.regStartAddress = 0x00;
+        this.registerNum = 3;
+        let writeDataBytes:number[]=[1234, 5678,9012];
+        setTimeout(() => {
+            this.writeRegisters(this.regStartAddress,writeDataBytes);
+        }, 1000);
+
+        //FC3
+        setTimeout(() => {
+            this.readHoldingRegisters(this.regStartAddress, this.registerNum);
+        }, 2000);
+    }
+
+    readInputRegister() {
+        //FC4 
+        this.regStartAddress = 0x01;
+        this.registerNum = 6;
+        setTimeout(() => {
+            this.readInputRegisters(this.regStartAddress, this.registerNum );
+        }, 1000);
+    }
 }
+
+
+
+
 
 /*
 

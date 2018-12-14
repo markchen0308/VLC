@@ -17,9 +17,9 @@ class RS485DRIVER {
         this.testProcess();
     }
     testProcess() {
-        this.writeReadHoldingRegister();
+        //this.writeReadHoldingRegister();
         //this.writeReadHoldingRegisters();
-        // this.readInputRegister();
+        this.readInputRegister();
     }
     setSlave(id) {
         this.modbus_Master.setID(id);
@@ -89,7 +89,7 @@ class RS485DRIVER {
     }
     writeReadHoldingRegisters() {
         //FC16
-        this.regStartAddress = 0x01;
+        this.regStartAddress = 0x00;
         this.registerNum = 3;
         let writeDataBytes = [1234, 5678, 9012];
         setTimeout(() => {
@@ -103,9 +103,9 @@ class RS485DRIVER {
     readInputRegister() {
         //FC4 
         this.regStartAddress = 0x01;
-        this.registerNum = 1;
+        this.registerNum = 6;
         setTimeout(() => {
-            this.readInputRegisters(this.regStartAddress, this.registerNum = 1);
+            this.readInputRegisters(this.regStartAddress, this.registerNum);
         }, 1000);
     }
 }
@@ -182,4 +182,4 @@ export class Sercom {
     }
 }
 */ 
-//# sourceMappingURL=rs485Driver.js.map
+//# sourceMappingURL=modbusDriver.js.map
