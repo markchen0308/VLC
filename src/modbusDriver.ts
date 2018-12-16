@@ -21,13 +21,13 @@ export class ModbusRTU {
 
         //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
         //this.setSlave(this.slaveID);
-       // this.testProcess();
+        // this.testProcess();
     }
 
 
 
     testProcess() {
-       //this.writeReadHoldingRegister();
+        //this.writeReadHoldingRegister();
         //this.writeReadHoldingRegisters();
         this.readInputRegister();
     }
@@ -37,59 +37,84 @@ export class ModbusRTU {
     }
 
     //FC1
-    readCoilStatus(startAddress: number, readStatusNumber: number) {
-        this.modbus_Master.readCoils(startAddress, readStatusNumber)
-            .then((d) => {
-                console.log("Received Coil data:", d.data);
-            })
-            .catch((e) => {
-                console.log(e.message)
-            })
+    readCoilStatus(startAddress: number, readStatusNumber: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.modbus_Master.readCoils(startAddress, readStatusNumber)
+                .then((d) => {
+                    console.log("Received Coil data:", d.data);
+                    resolve(d.data);
+                })
+                .catch((e) => {
+                    console.log(e.message);
+                    reject([]);
+                });
+        });
+
+
     }
 
 
     //FC3
-    readHoldingRegisters(startAddress: number, regNum: number) {
-        this.modbus_Master.readHoldingRegisters(startAddress, regNum)
-            .then((d) => {
-                console.log("received HoldingRegister", d.data);
-            })
-            .catch((e)=>{
-                console.log(e.message);
-            });
+    readHoldingRegisters(startAddress: number, regNum: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.modbus_Master.readHoldingRegisters(startAddress, regNum)
+                .then((d) => {
+                    console.log("received HoldingRegister", d.data);
+                    resolve(d.data);
+                })
+                .catch((e) => {
+                    console.log(e.message);
+                    reject([]);
+                });
+        });
+
     }
 
     //FC4
-    readInputRegisters(startAddress: number, regNum: number) {
-        this.modbus_Master.readInputRegisters(startAddress, regNum)
-            .then((d) => {
-                console.log("Received InputRegister", d.data);
-            })
-            .catch((e)=>{
-                console.log(e.message);
-            });
+    readInputRegisters(startAddress: number, regNum: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.modbus_Master.readInputRegisters(startAddress, regNum)
+                .then((d) => {
+                    console.log("received InputRegister", d.data);
+                    resolve(d.data);
+                })
+                .catch((e) => {
+                    console.log(e.message);
+                    reject([])
+                });
+        });
     }
 
     //FC6
-    writeSingleRegister(startAddress: number, regValue: number) {
-        this.modbus_Master.writeRegister(startAddress, regValue)
-            .then((d) => {
-                console.log("Write Holding Register", d)
-            })
-            .catch((e) => {
-                console.log(e.message);
-            })
+    writeSingleRegister(startAddress: number, regValue: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.modbus_Master.writeRegister(startAddress, regValue)
+                .then((d) => {
+                    console.log("Write Holding Register", d)
+                    resolve(d);
+                })
+                .catch((e) => {
+                    console.log(e.message);
+                    reject([]);
+                })
+        });
     }
 
     //FC16 
-    writeRegisters(startAddress: number, regValues: number[]) {
-        this.modbus_Master.writeRegisters(startAddress, regValues)
-            .then((d) => {
-                console.log("Write Holding Registers", d)
-            })
-            .catch((e) => {
-                console.log(e.message);
-            })
+    writeRegisters(startAddress: number, regValues: number[]): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+
+            this.modbus_Master.writeRegisters(startAddress, regValues)
+                .then((d) => {
+                    console.log("Write Holding Registers", d);
+                    resolve(d);
+                })
+                .catch((e) => {
+                    console.log(e.message);
+                    reject([]);
+                })
+        });
+
     }
 
 
@@ -97,7 +122,7 @@ export class ModbusRTU {
         //FC6
         this.regStartAddress = 0x01;
         this.registerNum = 1;
-        let writeDataByte:number=6789
+        let writeDataByte: number = 6789
         setTimeout(() => {
             this.writeSingleRegister(this.regStartAddress, writeDataByte);
         }, 1000);
@@ -113,9 +138,9 @@ export class ModbusRTU {
         //FC16
         this.regStartAddress = 0x00;
         this.registerNum = 3;
-        let writeDataBytes:number[]=[1234, 5678,9012];
+        let writeDataBytes: number[] = [1234, 5678, 9012];
         setTimeout(() => {
-            this.writeRegisters(this.regStartAddress,writeDataBytes);
+            this.writeRegisters(this.regStartAddress, writeDataBytes);
         }, 1000);
 
         //FC3
@@ -129,7 +154,7 @@ export class ModbusRTU {
         this.regStartAddress = 0x01;
         this.registerNum = 6;
         setTimeout(() => {
-            this.readInputRegisters(this.regStartAddress, this.registerNum );
+            this.readInputRegisters(this.regStartAddress, this.registerNum);
         }, 1000);
     }
 }
@@ -154,11 +179,11 @@ export class Sercom {
     public rawBuffer: any[] = [];
 
     public rawBufferOk: boolean = false;
- 
+
 
     constructor() {
         //this.initUart();
-        
+
     }
 
 
@@ -184,7 +209,7 @@ export class Sercom {
         return res;
     }
 
-    
+
     public WriteRS485(data: Buffer): void {
         this.serialport.write(data, (error: any) => {
             if (error) {
@@ -193,7 +218,7 @@ export class Sercom {
         });
     }
 
-   
+
     public  ReadRS485() {
         this.serialport.on('data', (data) => {
             if (this.rawBuffer.length < RS485_BUFFER_LENGTH) {
