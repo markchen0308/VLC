@@ -7,6 +7,6 @@ import {ProModbus} from './protocolModbus'
 
 //let processContol:PROCESSES=new PROCESSES();//start processes
 
-//let masterRs485:ModbusRTU=new ModbusRTU();
+let masterRs485:ModbusRTU=new ModbusRTU();
 
-let proModbus:ProModbus=new ProModbus();
+//let proModbus:ProModbus=new ProModbus();

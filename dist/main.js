@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const protocolModbus_1 = require("./protocolModbus");
+const modbusDriver_1 = require("./modbusDriver");
 //let oscntl:OSControl=new OSControl();
 //let processContol:PROCESSES=new PROCESSES();//start processes
-//let masterRs485:ModbusRTU=new ModbusRTU();
-let proModbus = new protocolModbus_1.ProModbus();
+let masterRs485 = new modbusDriver_1.ModbusRTU();
+//let proModbus:ProModbus=new ProModbus();
 //# sourceMappingURL=main.js.map

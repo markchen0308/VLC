@@ -29,8 +29,8 @@ enum inputregisterAddress {
 }
 
 
-let timeFunctionInterval: number = 5;
-let maxLightIdKeep: number = 62;//1~62
+let timeFunctionInterval: number = 100;
+let maxLightIdKeep: number = 1;//1~62
 
 
 export class ProModbus {
@@ -44,13 +44,22 @@ export class ProModbus {
     constructor() {
         this.masterRs485 = new ModbusRTU();
 
+        this.process();
     }
 
     async process() {
         await this.delay(1000);
         await this.getNetworkLightNumber()
             .then((value) => {
-                console.log(value.toString());
+                console.log("Found out lights:");
+                if(value.length>0)
+                {
+                    console.log(value.toString());
+                }
+                else
+                {
+                    console.log("no device");
+                }
             })
     }
 
@@ -58,11 +67,13 @@ export class ProModbus {
     getLightInformation(id: number): Promise<iDriver> {
 
         return new Promise<iDriver>((resolve, reject) => {
+            id=3;
             let driverInfo: iDriver = {};
             this.masterRs485.setSlave(id);
             let readCount: number = inputregisterAddress.manufactureID + 1;
             this.masterRs485.readInputRegisters(inputregisterAddress.version, readCount)
                 .then((value) => {
+                    console.log(value)
                     driverInfo.version = value[inputregisterAddress.version];
                     driverInfo.lightID = value[inputregisterAddress.lightID];
                     driverInfo.lightType = value[inputregisterAddress.lightType];
