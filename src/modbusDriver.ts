@@ -25,6 +25,12 @@ export class ModbusRTU {
     }
 
 
+    delay(msec:number):Promise<boolean>
+    {
+        return new Promise<boolean>((resolve) => {
+            setTimeout(()=>{resolve(true)},msec); 
+        });
+    }
 
     testProcess() {
         //this.writeReadHoldingRegister();
@@ -46,7 +52,7 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     console.log(e.message);
-                    reject([]);
+                    reject(e.message);
                 });
         });
 
@@ -64,7 +70,7 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     console.log(e.message);
-                    reject([]);
+                    reject(e.message);
                 });
         });
 
@@ -80,7 +86,7 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     console.log(e.message);
-                    reject([])
+                    reject(e.message)
                 });
         });
     }
@@ -95,7 +101,7 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     console.log(e.message);
-                    reject([]);
+                    reject(e.message);
                 })
         });
     }
@@ -111,7 +117,7 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     console.log(e.message);
-                    reject([]);
+                    reject(e.message);
                 })
         });
 

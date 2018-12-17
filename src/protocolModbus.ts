@@ -1,8 +1,7 @@
 import { ModbusRTU } from './modbusDriver';
-import { iDriver, iDevice } from './dataTypeModbus'
+import { iDriver, iDevice, iReadableRegister } from './dataTypeModbus'
 import * as DTMODBUS from './dataTypeModbus';
 
-import * as Enum from 'enum';
 import { promises } from 'fs';
 
 
@@ -25,40 +24,13 @@ enum inputregisterAddress {
     manufactureID = 6,
     readableRegisterGroup = 10,
     countReadableRegister,
-    g0Device0H,
-    g0Device0L,
-    g0Device1H,
-    g0Device1L,
-    g0Device2H,
-    g0Device2L,
-    g0Device3H,
-    g0Device3L,
-    g0Device4H,
-    g0Device4L,
-    g0Device5H,
-    g0Device5L,
-    g0Device6H,
-    g0Device6L,
-    g0Device7H,
-    g0Device7L,
-    g1Device0H,
-    g1Device0L,
-    g1Device1H,
-    g1Device1L,
-    g1Device2H,
-    g1Device2L,
-    g1Device3H,
-    g1Device3L,
-    g1Device4H,
-    g1Device4L,
-    g1Device5H,
-    g1Device5L,
-    g1Device6H,
-    g1Device6L,
-    g1Device7H,
-    g1Device7L
+    g0Device000,
+    g1Device000 = g0Device000 + 128,
 }
 
+
+let timeFunctionInterval: number = 5;
+let maxLightIdKeep: number = 62;//1~62
 
 
 export class ProModbus {
@@ -71,8 +43,16 @@ export class ProModbus {
 
     constructor() {
         this.masterRs485 = new ModbusRTU();
+
     }
 
+    async process() {
+        await this.delay(1000);
+        await this.getNetworkLightNumber()
+            .then((value) => {
+                console.log(value.toString());
+            })
+    }
 
 
     getLightInformation(id: number): Promise<iDriver> {
@@ -86,7 +66,7 @@ export class ProModbus {
                     driverInfo.version = value[inputregisterAddress.version];
                     driverInfo.lightID = value[inputregisterAddress.lightID];
                     driverInfo.lightType = value[inputregisterAddress.lightType];
-                    driverInfo.Mac= value[inputregisterAddress.lightMacH].toString(16) + value[inputregisterAddress.lightMacM].toString(16) + value[inputregisterAddress.lightMacL].toString(16);
+                    driverInfo.Mac = value[inputregisterAddress.lightMacH].toString(16) + value[inputregisterAddress.lightMacM].toString(16) + value[inputregisterAddress.lightMacL].toString(16);
                     driverInfo.manufactureID = value[inputregisterAddress.manufactureID];
                     readCount = holdingRegisterAddress.ckMax + 1;
                     setTimeout(() => {
@@ -100,28 +80,106 @@ export class ProModbus {
                                 driverInfo.ckMax = value[holdingRegisterAddress.ckMax];
                                 resolve(driverInfo);
                             })
-                            .catch((value) => {
-                                reject([]);
+                            .catch((errorMsg) => {
+                                reject(errorMsg);
                             })
-                    }, 5);
-
+                    }, timeFunctionInterval);
                 })
-                .catch((value) => {
-                    reject([]);
+                .catch((errorMsg) => {
+                    reject(errorMsg);
                 })
         });
     }
 
-    async  getReadableGroupWithCount(id: number) {
-        this.masterRs485.setSlave(id);
-        let readCount: number = inputregisterAddress.countReadableRegister - inputregisterAddress.readableRegisterGroup + 1;
-        let rx = await this.masterRs485.readInputRegisters(inputregisterAddress.readableRegisterGroup, readCount);
+    getReadableGroupWithCount(id: number): Promise<iReadableRegister> {
+        return new Promise<iReadableRegister>((resolve, reject) => {
+            let readableRegisterInfo: iReadableRegister = {};
+            this.masterRs485.setSlave(id);
+            let readCount: number = inputregisterAddress.countReadableRegister - inputregisterAddress.readableRegisterGroup + 1;
+            this.masterRs485.readInputRegisters(inputregisterAddress.readableRegisterGroup, readCount)
+                .then((value) => {
+                    readableRegisterInfo.readableRegisterGroup = value[inputregisterAddress.readableRegisterGroup];
+                    readableRegisterInfo.countReadableRegister = value[inputregisterAddress.countReadableRegister];
+                    resolve(readableRegisterInfo);
+                })
+                .catch((errorMsg) => {
+                    reject(errorMsg);
+                })
+        });
     }
 
-    async getReadableRegister(id: number, readCount: number) {
+    getDevicRegister(id: number, readableRegisterInfo: iReadableRegister): Promise<number[]> {
         this.masterRs485.setSlave(id);
-        let rx = await this.masterRs485.readInputRegisters(inputregisterAddress.g0Device0H, readCount);
+        let arrayDevicRegister: number[] = [];
+        return new Promise<number[]>((resolve, reject) => {
+            let startRegisterAddress: number = (readableRegisterInfo.readableRegisterGroup == 0) ? inputregisterAddress.g0Device000 : inputregisterAddress.g1Device000;
+            this.masterRs485.readInputRegisters(startRegisterAddress, readableRegisterInfo.countReadableRegister)
+                .then((value) => {
+                    value.forEach(item => {
+                        arrayDevicRegister.push(item);
+                    });
+                    resolve(arrayDevicRegister);
+                })
+                .catch((errorMsg) => {
+                    reject(errorMsg);
+                })
+        });
+    }
 
+    readLightDevice(lightID: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+
+            this.getReadableGroupWithCount(lightID)
+                .then((value) => {
+                    setTimeout(() => {
+                        this.getDevicRegister(lightID, value)
+                            .then((value) => {
+                                resolve(value);
+                            })
+                            .catch((errorMsg) => {
+                                reject(errorMsg);
+                            })
+                    }, timeFunctionInterval);
+                })
+                .catch((errorMsg) => {
+                    reject(errorMsg);
+                })
+        });
+    }
+
+
+    async getNetworkLightNumber(): Promise<iDriver[]> {
+        let driversKeep: iDriver[] = [];
+        let id = 0;
+
+        for (let i: number = 0; i < maxLightIdKeep; i++) {
+            id += 1;
+            console.log('*Start query Light : ' + id.toString());
+            await this.getLightInformation(id)
+                .then((value) => {
+                    console.log('Resopnse:');
+                    console.log(value);
+                    driversKeep.push(value);
+                })
+                .catch((errorMsg) => {
+                    console.log('Resopnse error:' + errorMsg);
+                });
+
+            await this.delay(timeFunctionInterval);
+        }
+
+        return new Promise<iDriver[]>((resolve, reject) => {
+            resolve(driversKeep);
+        });
+    }
+
+
+
+
+    delay(msec: number): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            setTimeout(() => { resolve(true) }, msec);
+        });
     }
 
 }

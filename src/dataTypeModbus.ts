@@ -15,9 +15,14 @@ export interface iDriver {
 }
 
 export interface iDevice {
-    deviceMac:string;
-    deviceSeq:number;
-    deviceType:number;
-    deviceData:string;
+    deviceMac?:string;
+    deviceSeq?:number;
+    deviceType?:number;
+    deviceData?:string;
 }
 
+
+export interface iReadableRegister {
+    readableRegisterGroup ?:number;
+    countReadableRegister?:number;
+}
