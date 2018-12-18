@@ -11,14 +11,31 @@ export interface iDriver {
     Mac?:string;
     manufactureID?:number;
     version?:number;
-    deviceNow?:iDevice[];
+    deviceTable?:iDevice[];
 }
 
 export interface iDevice {
-    deviceMac?:string;
-    deviceSeq?:number;
-    deviceType?:number;
-    deviceData?:string;
+    type?:number;
+    mac?:string;
+    seq?:number;
+    lId1?:number;
+    br1?:number;
+    lId2?:number;
+    br2?:number;
+    rssi?:number;
+    labelX?:number;
+    labelY?:number;
+    labelH?:number;
+    Gx?:number;
+    Gy?:number;
+    Gz?:number;
+    batPow?:number;
+    other?:{};
+}
+
+export interface idripstand {
+    weight?:number,
+    speed?:number
 }
 
 

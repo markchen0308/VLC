@@ -21,7 +21,7 @@ export class ModbusRTU {
   
         //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
         
-         this.testProcess();
+        // this.testProcess();
     }
 
 
@@ -96,8 +96,8 @@ export class ModbusRTU {
                     resolve(d.data);
                 })
                 .catch((e) => {
-                    console.log(e.message);
                     reject(e.message)
+                   
                 });
         });
     }

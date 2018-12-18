@@ -14,7 +14,7 @@ class ModbusRTU {
         //set limitation of response time
         this.modbus_Master.setTimeout(this.timeout);
         //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
-        this.testProcess();
+        // this.testProcess();
     }
     delay(msec) {
         return new Promise((resolve) => {
@@ -75,7 +75,6 @@ class ModbusRTU {
                 resolve(d.data);
             })
                 .catch((e) => {
-                console.log(e.message);
                 reject(e.message);
             });
         });
