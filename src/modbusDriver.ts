@@ -6,7 +6,7 @@ let ModbusSer = require('modbus-serial');
 export class ModbusRTU {
     public timeout: number = 500;
     public deviceName: string = '/dev/ttyUSB0';
-    public baudrate: number = 115200;
+    public baudrate: number = 3000000;//115200;
     public modbus_Master = new ModbusSer();
 
     public regStartAddress: number;

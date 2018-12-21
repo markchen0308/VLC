@@ -11,7 +11,7 @@ import {ProModbus} from './protocolModbus'
 
 let proModbus:ProModbus=new ProModbus();
 
-let numtest:Uint8Array=Uint8Array.from([0xFF,0xFE]);
+//let numtest:Uint8Array=Uint8Array.from([0xFF,0xFE]);
 
 
 
@@ -25,4 +25,4 @@ function byte2Number2s(hbyte:Uint8Array,lbyte:Uint8Array):number
     return num;
 }
 
-console.log(byte2Number2s(numtest,numtest))
+//console.log(byte2Number2s(numtest,numtest))

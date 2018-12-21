@@ -7,7 +7,7 @@ class ModbusRTU {
     constructor() {
         this.timeout = 500;
         this.deviceName = '/dev/ttyUSB0';
-        this.baudrate = 115200;
+        this.baudrate = 3000000; //115200;
         this.modbus_Master = new ModbusSer();
         //set Baudrate
         this.modbus_Master.connectRTU(this.deviceName, { baudRate: this.baudrate });

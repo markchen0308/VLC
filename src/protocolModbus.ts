@@ -29,8 +29,8 @@ enum inputregisterAddress {
 }
 
 enum typesDevice {
-    tag = 0,
-    dripStand = 1,
+    tag = 1,
+    dripStand,
 }
 
 enum deviceLength {
@@ -62,25 +62,21 @@ enum otherDripStandAddress {
 }
 
 let timeFunctionInterval: number = 5;
-let maxLightIdKeep: number = 5;//1~62
+let maxLightIdKeep: number = 62;//1~62
 
 
 export class ProModbus {
 
-
     masterRs485: ModbusRTU;
     drivers: iDriver[];
 
-
-
     constructor() {
         this.masterRs485 = new ModbusRTU();
-
         this.process();
     }
 
+    //process 
     async process() {
-        let x: number = 0x1234;
 
         await this.delay(1000);
         //get exist driver in network
@@ -100,16 +96,12 @@ export class ProModbus {
             });
 
         for (let i = 0; i < this.drivers.length; i++) {
+            console.log(this.drivers[i].lightID);
             await this.readLightDevice(this.drivers[i].lightID)
-            .then((value)=>{
-                this.drivers[i].deviceTable=this.getDeviceTable(value);
-            })
-
+                .then((value) => {
+                    this.drivers[i].deviceTable = this.getDeviceTable(value);
+                })
         }
-   
-
-
-
     }
 
 
@@ -119,10 +111,11 @@ export class ProModbus {
             let readableRegisterInfo: iReadableRegister = {};
             this.masterRs485.setSlave(id);
             let readCount: number = inputregisterAddress.countReadableRegister - inputregisterAddress.readableRegisterGroup + 1;
+
             this.masterRs485.readInputRegisters(inputregisterAddress.readableRegisterGroup, readCount)
                 .then((value) => {
-                    readableRegisterInfo.readableRegisterGroup = value[inputregisterAddress.readableRegisterGroup];
-                    readableRegisterInfo.countReadableRegister = value[inputregisterAddress.countReadableRegister];
+                    readableRegisterInfo.readableRegisterGroup = value[0];
+                    readableRegisterInfo.countReadableRegister = value[1];
                     resolve(readableRegisterInfo);
                 })
                 .catch((errorMsg) => {
@@ -130,6 +123,7 @@ export class ProModbus {
                 })
         });
     }
+
     //read registers of light
     getDevicRegister(id: number, readableRegisterInfo: iReadableRegister): Promise<number[]> {
         this.masterRs485.setSlave(id);
@@ -171,12 +165,10 @@ export class ProModbus {
         });
     }
 
-
     //get exist light driver
     async getNetworkLightNumber(): Promise<iDriver[]> {
         let driversKeep: iDriver[] = [];
         let id = 0;
-
         for (let i: number = 0; i < maxLightIdKeep; i++) {
             id += 1;
             console.log('*Start query Light : ' + id.toString());
@@ -189,16 +181,13 @@ export class ProModbus {
                 .catch((errorMsg) => {
                     console.log('Resopnse error:' + errorMsg);
                 });
-
-            // await this.delay(timeFunctionInterval);
+             await this.delay(timeFunctionInterval);
         }
 
         return new Promise<iDriver[]>((resolve, reject) => {
-
             resolve(driversKeep);
         });
     }
-
 
     //get light driver information
     getLightInformation(id: number): Promise<iDriver> {
@@ -208,12 +197,14 @@ export class ProModbus {
             let readCount: number = inputregisterAddress.manufactureID + 1;
             this.masterRs485.readInputRegisters(inputregisterAddress.version, readCount)
                 .then((value) => {
+                    console.log(value);
                     driverInfo.version = value[inputregisterAddress.version];
                     driverInfo.lightID = value[inputregisterAddress.lightID];
                     driverInfo.lightType = value[inputregisterAddress.lightType];
                     driverInfo.Mac = value[inputregisterAddress.lightMacH].toString(16) + value[inputregisterAddress.lightMacM].toString(16) + value[inputregisterAddress.lightMacL].toString(16);
                     driverInfo.manufactureID = value[inputregisterAddress.manufactureID];
                     readCount = holdingRegisterAddress.ckMax + 1;
+                    console
                     setTimeout(() => {
                         this.masterRs485.readHoldingRegisters(holdingRegisterAddress.brightness, readCount)
                             .then(value => {
@@ -236,16 +227,12 @@ export class ProModbus {
         });
     }
 
-
- 
-
     //number array to uint8  array matrix
     getNumber2Uint8Matrix(num: number[]): Uint8Array[] {
         let matix: Uint8Array[] = [];
         let start: number = 0;
         let end: number = 0;
         let len: number = 0;
-
         let u8: Uint8Array = new Uint8Array(num.length * 2);
         let i: number = 0;
 
@@ -264,10 +251,10 @@ export class ProModbus {
             else {
                 break;
             }
-            end = start + len - 1;
+            end = start + len;
             let partOfArry: Uint8Array = u8.subarray(start, end);
             matix.push(partOfArry);
-            start = end + 1;
+            start = end;
         }
         return matix;
     }
@@ -275,17 +262,16 @@ export class ProModbus {
 
     //2 bytes to number
     byte2Number(hbyte: number, lbyte: number): number {
-        let num: number = hbyte << 8 + lbyte;
+        let num: number = hbyte * 256 + lbyte;
         return num;
     }
-
-
 
     //get device content
     paserProtocol(u8: Uint8Array): iDevice {
         let dev: iDevice = {};
         dev.type = u8[devAddress.type];
         dev.seq = u8[devAddress.seq];
+        dev.mac = '';
         for (let i: number = 0; i < 6; i++) {
             dev.mac += u8[devAddress.Mac + i].toString(16);
         }
@@ -296,7 +282,7 @@ export class ProModbus {
         dev.rssi = -1 * this.byte2Number(u8[devAddress.rssi], u8[devAddress.rssi + 1]);
         dev.Gx = u8[devAddress.Gx];
         dev.Gy = u8[devAddress.Gy];
-        dev.Gy = u8[devAddress.Gz];
+        dev.Gz = u8[devAddress.Gz];
         dev.batPow = u8[devAddress.batPow];
         dev.labelX = u8[devAddress.labelX];
         dev.labelY = u8[devAddress.labelY];
@@ -324,10 +310,8 @@ export class ProModbus {
         matrix.forEach(item => {
             devInfo.push(this.paserProtocol(item));
         });
-
         return devInfo;
     }
-
 
     //delay function
     delay(msec: number): Promise<boolean> {
