@@ -1,5 +1,16 @@
+
+
+import * as Net from 'net';//import socket module
+import * as DTCMD from './dataTypeCmd';
+
+let fs = require('fs');
+let configfilePath = './config.json';
+
+
+
 import { ModbusRTU } from './modbusDriver';
-import { iDriver, iDevice, iReadableRegister, idripstand } from './dataTypeModbus'
+import { iDriver, iDevice, iReadableRegister, idripstand, iDeviceClassfy } from './dataTypeModbus';
+
 import * as DTMODBUS from './dataTypeModbus';
 
 import { promises } from 'fs';
@@ -22,10 +33,9 @@ enum inputregisterAddress {
     lightMacM,
     lightMacL,
     manufactureID = 6,
-    readableRegisterGroup = 10,
-    countReadableRegister,
+    countReadableRegister = 10,
     g0Device000,
-    g1Device000 = g0Device000 + 128,
+
 }
 
 enum typesDevice {
@@ -61,48 +71,148 @@ enum otherDripStandAddress {
     speed = 26
 }
 
-let timeFunctionInterval: number = 5;
-let maxLightIdKeep: number = 62;//1~62
 
+enum modbusCmd {
+    location = 1,
+  
+}
+
+let timeFunctionInterval: number = 5;
+let maxLightIdKeep: number = 62;//max acount of light in a gw loop
+let pollingTimeStep: number = 5;
 
 export class ProModbus {
 
+    modbusClient: Net.Socket;
+    modbusServerIP: string;
+    modbusServerPort: number;
+
     masterRs485: ModbusRTU;
-    drivers: iDriver[];
+   drivers: iDriver[];
+    deviceClassfy: iDeviceClassfy[] = [];
+    pollingTime: number;
+
 
     constructor() {
+
+        this.startClient();
+
         this.masterRs485 = new ModbusRTU();
         this.process();
     }
 
+    async startClient() {
+        await this.readConfigFile();
+        this.configureClint();
+    }
+
+    configureClint() {
+
+        //get reply information from server 
+        //this.socketWebserver.on('data', (data) => {
+        //       let cmdString:any=data
+        //       let cmd=JSON.parse(cmdString);
+        //      console.dir(cmd);
+        // });
+        this.modbusClient = Net.connect(this.modbusServerPort, this.modbusServerIP, () => {
+            console.log(`modbusClient connected to: ${this.modbusClient.address} :  ${this.modbusClient.localPort}`);
+        });
+
+        this.modbusClient.on('end', () => {
+            console.log('modbusClient disconnected');
+        });
+
+        // received data \
+        this.modbusClient.on('data', (data) => {
+            console.log(data.toString());
+
+            // 輸出由 client 端發來的資料位元組長度
+            console.log('socket.bytesRead is ' + this.modbusClient.bytesRead);
+        });
+
+    }
+
+    sendModbusMessage2Server(cmd: DTCMD.iCmd) {
+        this.modbusClient.write(JSON.stringify(cmd));
+    }
+
+
+
+    readConfigFile(): Promise<any> {
+        return new Promise<any>((resolve, reject) => {
+            let configJsonFile = fs.readFileSync(configfilePath, 'utf8');//read config.json file
+            let configJson = JSON.parse(configJsonFile);//parse coonfig.json file
+            this.modbusServerPort = configJson.scoketModbusServerPort;
+            this.modbusServerIP = configJson.scoketModbusServerIP;
+            resolve(true);
+        });
+    }
+
+
+    initSocket() {
+        let configJsonFile = fs.readFileSync(configfilePath, 'utf8');//read config.json file
+        let configJson = JSON.parse(configJsonFile);//parse coonfig.json file
+        let serverPort = configJson.scoketWebServerPort;
+        let serverIp = configJson.socketWebServerIP;
+    }
     //process 
     async process() {
 
-        await this.delay(1000);
+        await this.delay(1000);//wait modbus ready
+        if (this.masterRs485.isDeviceOk) {
+            await this.getNetworkLightNumber()
+                .then((value) => {
+
+                    if (value.length > 0) {
+
+                        this.drivers = value;
+                        console.log("Found out lights:");
+                        console.log(value.toString());
+                    }
+                    else {
+                        this.drivers.length=0;
+                        console.log("no device");
+                    }
+                });
+            this.pollingTime = 1000 - this.drivers.length * 10;
+
+
+            if (this.drivers.length > 0) {
+                //polling time 
+                setInterval(() => {
+                    this.deviceClassfy.length=0;//clear 
+                    this.pollingLocationInfo();//ask input register location data
+                }, this.pollingTime)
+            }
+        }
+        else {
+            console.log('modbus stick is nor exist!');
+        }
         //get exist driver in network
-        await this.getNetworkLightNumber()
-            .then((value) => {
+    }
 
-                if (value.length > 0) {
-                    console.log("Found out lights:");
-                    this.drivers = value;
-                    console.log(value.toString());
-                }
-                else {
-
-                    this.drivers = [];
-                    console.log("no device");
-                }
-            });
-
+    //------------------------------------------------------------------------------------
+    async pollingLocationInfo() {
         for (let i = 0; i < this.drivers.length; i++) {
             console.log(this.drivers[i].lightID);
+            await this.delay(pollingTimeStep);
             await this.readLightDevice(this.drivers[i].lightID)
                 .then((value) => {
-                    this.drivers[i].deviceTable = this.getDeviceTable(value);
+                    this.sortDeviceTable(this.drivers[i].lightID, value);
+                    
                 })
         }
+        //write to server
+        let cmd:DTCMD.iCmd=
+        {
+            cmdtype:modbusCmd.location,
+            cmdData:this.deviceClassfy
+        }
+        this.sendModbusMessage2Server(cmd);
+
     }
+
+    //----------------------------------------------------------------------------------
 
 
     //read readable register group and number of register
@@ -110,12 +220,11 @@ export class ProModbus {
         return new Promise<iReadableRegister>((resolve, reject) => {
             let readableRegisterInfo: iReadableRegister = {};
             this.masterRs485.setSlave(id);
-            let readCount: number = inputregisterAddress.countReadableRegister - inputregisterAddress.readableRegisterGroup + 1;
+            let readCount: number = 1;
 
-            this.masterRs485.readInputRegisters(inputregisterAddress.readableRegisterGroup, readCount)
+            this.masterRs485.readInputRegisters(inputregisterAddress.countReadableRegister, readCount)
                 .then((value) => {
-                    readableRegisterInfo.readableRegisterGroup = value[0];
-                    readableRegisterInfo.countReadableRegister = value[1];
+                    readableRegisterInfo.countReadableRegister = value[0];
                     resolve(readableRegisterInfo);
                 })
                 .catch((errorMsg) => {
@@ -129,7 +238,7 @@ export class ProModbus {
         this.masterRs485.setSlave(id);
         let arrayDevicRegister: number[] = [];
         return new Promise<number[]>((resolve, reject) => {
-            let startRegisterAddress: number = (readableRegisterInfo.readableRegisterGroup == 0) ? inputregisterAddress.g0Device000 : inputregisterAddress.g1Device000;
+            let startRegisterAddress: number = inputregisterAddress.g0Device000;
             this.masterRs485.readInputRegisters(startRegisterAddress, readableRegisterInfo.countReadableRegister)
                 .then((value) => {
                     value.forEach(item => {
@@ -181,7 +290,7 @@ export class ProModbus {
                 .catch((errorMsg) => {
                     console.log('Resopnse error:' + errorMsg);
                 });
-             await this.delay(timeFunctionInterval);
+            await this.delay(pollingTimeStep);
         }
 
         return new Promise<iDriver[]>((resolve, reject) => {
@@ -195,16 +304,17 @@ export class ProModbus {
             let driverInfo: iDriver = {};
             this.masterRs485.setSlave(id);
             let readCount: number = inputregisterAddress.manufactureID + 1;
+
             this.masterRs485.readInputRegisters(inputregisterAddress.version, readCount)
                 .then((value) => {
-                    console.log(value);
+                    //console.log(value);
                     driverInfo.version = value[inputregisterAddress.version];
                     driverInfo.lightID = value[inputregisterAddress.lightID];
                     driverInfo.lightType = value[inputregisterAddress.lightType];
                     driverInfo.Mac = value[inputregisterAddress.lightMacH].toString(16) + value[inputregisterAddress.lightMacM].toString(16) + value[inputregisterAddress.lightMacL].toString(16);
                     driverInfo.manufactureID = value[inputregisterAddress.manufactureID];
                     readCount = holdingRegisterAddress.ckMax + 1;
-                    console
+
                     setTimeout(() => {
                         this.masterRs485.readHoldingRegisters(holdingRegisterAddress.brightness, readCount)
                             .then(value => {
@@ -219,7 +329,7 @@ export class ProModbus {
                             .catch((errorMsg) => {
                                 reject(errorMsg);
                             })
-                    }, timeFunctionInterval);
+                    }, pollingTimeStep);
                 })
                 .catch((errorMsg) => {
                     reject(errorMsg);
@@ -267,7 +377,8 @@ export class ProModbus {
     }
 
     //get device content
-    paserProtocol(u8: Uint8Array): iDevice {
+    paserProtocol2Dev(recLightID: number, u8: Uint8Array): iDevice {
+
         let dev: iDevice = {};
         dev.type = u8[devAddress.type];
         dev.seq = u8[devAddress.seq];
@@ -287,7 +398,7 @@ export class ProModbus {
         dev.labelX = u8[devAddress.labelX];
         dev.labelY = u8[devAddress.labelY];
         dev.labelH = this.byte2Number(u8[devAddress.labelH], u8[devAddress.labelH + 1]);
-
+        dev.recLightID = recLightID;
         switch (u8[0]) {
             case typesDevice.tag:
                 dev.other = {};
@@ -303,16 +414,41 @@ export class ProModbus {
         return dev;
     }
 
-    //get device table
-    getDeviceTable(num: number[]): iDevice[] {
-        let devInfo: iDevice[] = [];
-        let matrix: Uint8Array[] = this.getNumber2Uint8Matrix(num);
-        matrix.forEach(item => {
-            devInfo.push(this.paserProtocol(item));
-        });
-        return devInfo;
+    //--------------------------------------------------------------------------------------------------
+    //group device by device mac
+    sortDev(dev: iDevice) {
+        let isContainDevice: boolean = false;
+        if (this.deviceClassfy.length > 0) {
+            for (let i: number = 0; i < this.deviceClassfy.length; i++) {
+                if (this.deviceClassfy[i].mac == dev.mac) {
+                    this.deviceClassfy[i].deviceInfo.push(dev);
+                    isContainDevice = true;
+                    break;
+                }
+            }
+            if (isContainDevice == false) {
+                let deviceClassfy: iDeviceClassfy = { mac: dev.mac, deviceInfo: [] };
+                deviceClassfy.deviceInfo.push(dev);
+                this.deviceClassfy.push(deviceClassfy);
+            }
+        }
+        else {
+            let deviceClassfy: iDeviceClassfy = { mac: dev.mac, deviceInfo: [] };
+            deviceClassfy.deviceInfo.push(dev);
+            this.deviceClassfy.push(deviceClassfy);
+        }
     }
-
+    //----------------------------------------------------------------------------------
+    //get device table
+    sortDeviceTable(recLightID: number, num: number[]) {
+        let devInfo: iDevice[] = [];
+        let matrix: Uint8Array[] = this.getNumber2Uint8Matrix(num);//convert number to byte
+        matrix.forEach(item => {
+            this.sortDev(this.paserProtocol2Dev(recLightID, item));//paser byte data to device and sort it by mac
+            // devInfo.push(this.paserProtocol2Dev(recLightID, item));
+        });
+    }
+    //-------------------------------------------------------------------------------
     //delay function
     delay(msec: number): Promise<boolean> {
         return new Promise<boolean>((resolve) => {

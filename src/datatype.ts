@@ -16,7 +16,6 @@ export interface InterfaceCentral {
 
 
 
-
 export class CP_PROTOCOL {
     HOST: string = '127.0.0.1';
     PORT_RS485_Central: number = 10003;//rs485 port

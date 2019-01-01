@@ -2,7 +2,7 @@
 import {PROCESSES} from './processes';
 import { OSControl } from './osControl';
 import {ModbusRTU} from './modbusDriver'
-import {ProModbus} from './protocolModbus'
+import {ProModbus} from './modbusProtocol'
 //let oscntl:OSControl=new OSControl();
 
 //let processContol:PROCESSES=new PROCESSES();//start processes

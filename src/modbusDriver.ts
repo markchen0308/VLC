@@ -1,52 +1,88 @@
 
 //import ModbusRTU from 'modbus-serial';
 //let 
+import * as util from 'util';
+import * as CP from 'child_process';
 let ModbusSer = require('modbus-serial');
 
 export class ModbusRTU {
-    public timeout: number = 500;
-    public deviceName: string = '/dev/ttyUSB0';
-    public baudrate: number = 3000000;//115200;
+    exec = util.promisify(CP.exec);
+    public timeout: number = 100;
+    public rs485DeviceName: string = 'ttyUSB0';
+    public devicePath: string = '/dev/' + this.rs485DeviceName;
+    public baudrate: number =3000000;//baudrate =3m;
     public modbus_Master = new ModbusSer();
 
     public regStartAddress: number;
     public registerNum: number;
     public writeValue: number[];
+    isDeviceOk: boolean = false;
 
     constructor() {
-        //set Baudrate
-        this.modbus_Master.connectRTU(this.deviceName, { baudRate: this.baudrate })
-        //set limitation of response time
-        this.modbus_Master.setTimeout(this.timeout);
-  
-        //this.modbus_client.connectRTUBuffered(this.deviceName,{baudRate:this.baudrate});
-        
         // this.testProcess();
+        this.process();
+    }
+
+    async process() {
+        await this.checkRS485Device()
+            .then((rx) => {
+                //set Baudrate
+                this.modbus_Master.connectRTU(this.devicePath, { baudRate: this.baudrate })
+                //set limitation of response time
+                this.modbus_Master.setTimeout(this.timeout);
+                console.log(this.rs485DeviceName + ' is exist!');
+
+                //this.testProcess();
+            })
+            .catch((rx) => {
+                console.log(this.rs485DeviceName + ' is not exist!');
+            })
     }
 
 
-    delay(msec:number):Promise<boolean>
-    {
-        return new Promise<boolean>((resolve) => {
-            setTimeout(()=>{resolve(true)},msec); 
+
+    async checkRS485Device(): Promise<boolean> {
+       
+        let rx = await this.exec('ls /dev/ | grep ' + this.rs485DeviceName);
+        //console.log(rx.stdout);
+        if (rx.stdout.includes(this.rs485DeviceName)) {
+            this.isDeviceOk = true;
+            rx = await this.exec('chmod +x ' + this.devicePath);//set  executable
+        }
+        else {
+            this.isDeviceOk = false;
+        }
+
+        return new Promise<boolean>((resolve, reject) => {
+            if (this.isDeviceOk) {
+                resolve(this.isDeviceOk);
+            }
+            else {
+                reject(this.isDeviceOk);
+            }
         });
     }
 
-   async testProcess() {
+    delay(msec: number): Promise<boolean> {
+        return new Promise<boolean>((resolve) => {
+            setTimeout(() => { resolve(true) }, msec);
+        });
+    }
+
+    async testProcess() {
         //this.writeReadHoldingRegister();
         //this.writeReadHoldingRegisters();
         //this.readInputRegister();
         await this.delay(1000);
-        this.setSlave(3);
-        await this.readHoldingRegisters(0x00,1)
-        .then((d)=>{
-            console.log(d);
+        this.setSlave(7);
+        await this.readHoldingRegisters(0, 6)
+            .then((d) => {
+                console.log(d);
 
-        })
-        .catch((errorMsg)=>
-        {
-            console.log(errorMsg);
-        });
+            })
+            .catch((errorMsg) => {
+                console.log(errorMsg);
+            });
     }
 
     setSlave(id: number) {
@@ -97,7 +133,7 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     reject(e.message)
-                   
+
                 });
         });
     }

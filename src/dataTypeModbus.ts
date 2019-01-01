@@ -11,8 +11,9 @@ export interface iDriver {
     Mac?:string;
     manufactureID?:number;
     version?:number;
-    deviceTable?:iDevice[];
+   // deviceTable?:iDevice[];
 }
+
 
 export interface iDevice {
     type?:number;
@@ -30,16 +31,45 @@ export interface iDevice {
     Gy?:number;
     Gz?:number;
     batPow?:number;
+    recLightID?:number;
     other?:{};
 }
 
+
+export interface iLocationData
+{
+    lId1?:number;
+    br1?:number;
+    lId2?:number;
+    br2?:number;
+    rssi?:number;
+    recLightID?:number;
+    labelX?:number;
+    labelY?:number;
+    labelH?:number;
+}
+export interface iDeviceClassfy{
+    mac?:string;
+    deviceInfo?:iDevice[];
+}
+
 export interface idripstand {
-    weight?:number,
-    speed?:number
+    weight?:number;
+    speed?:number;
 }
 
 
 export interface iReadableRegister {
-    readableRegisterGroup ?:number;
     countReadableRegister?:number;
+}
+
+
+
+export interface iGateway {
+    GatewaySeq:number,
+    GatewayIP: String,
+    GatewayMAC: String,
+    Datetime:string,
+    DriverCount: number,
+    DriverMember: iDriver[]//array
 }

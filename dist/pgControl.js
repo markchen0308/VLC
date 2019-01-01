@@ -1,4 +1,41 @@
-//import { Client, QueryResult } from 'pg'
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const PG = require("pg");
+const fs = require("fs");
+let configfilePath = './config.json';
+class PgControl {
+    constructor() {
+        this.connectDB()
+            .then((val) => {
+        })
+            .catch((val) => {
+        });
+    }
+    connectDB() {
+        return new Promise((resolve, reject) => {
+            let configJsonFile = fs.readFileSync(configfilePath, 'utf8'); //read config.json file
+            let configJson = JSON.parse(configJsonFile); //parse coonfig.json file
+            this.dbConfig = {
+                user: configJson.dbUser,
+                host: configJson.dbHost,
+                database: configJson.dbName,
+                password: configJson.dbPassword,
+                port: configJson.dbPort
+            };
+            this.pgClient = new PG.Client(this.dbConfig);
+            this.pgClient.connect().then(() => {
+                console.log('postreSQL is connected ');
+                resolve(true);
+            })
+                .catch((err) => {
+                console.log('postreSQL connected unsucessfully');
+                console.log("Error Message：" + err);
+                reject(false);
+            });
+        });
+    }
+}
+exports.PgControl = PgControl;
 /*
 
 let isDelTable: boolean = false;
@@ -24,7 +61,7 @@ export class PgControl {
     delAllCmd: string = 'DELETE FROM tableSensor';
     dropTableCmd: string = 'DROP TABLE IF EXISTS tableSensor'
 
-  
+
 
 
     constructor() {

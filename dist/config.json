@@ -1,0 +1,18 @@
+{
+    "webserverIp":"192.168.1.7",
+    "webserverPort": 80,
+   
+    "dbUser": "postgres", 
+    "dbHost": "localhost",
+    "dbName": "iot",
+    "dbPassword": "postgres",
+    "dbPort": 5432,
+
+    "socketWebServerIP":"localhost",
+    "scoketWebServerPort":10001,
+
+    "scoketModbusServerIP":"localhost",
+    "scoketModbusServerPort":10002    
+}
+
+

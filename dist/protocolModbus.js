@@ -19,10 +19,8 @@ var inputregisterAddress;
     inputregisterAddress[inputregisterAddress["lightMacM"] = 4] = "lightMacM";
     inputregisterAddress[inputregisterAddress["lightMacL"] = 5] = "lightMacL";
     inputregisterAddress[inputregisterAddress["manufactureID"] = 6] = "manufactureID";
-    inputregisterAddress[inputregisterAddress["readableRegisterGroup"] = 10] = "readableRegisterGroup";
-    inputregisterAddress[inputregisterAddress["countReadableRegister"] = 11] = "countReadableRegister";
-    inputregisterAddress[inputregisterAddress["g0Device000"] = 12] = "g0Device000";
-    inputregisterAddress[inputregisterAddress["g1Device000"] = 140] = "g1Device000";
+    inputregisterAddress[inputregisterAddress["countReadableRegister"] = 10] = "countReadableRegister";
+    inputregisterAddress[inputregisterAddress["g0Device000"] = 11] = "g0Device000";
 })(inputregisterAddress || (inputregisterAddress = {}));
 var typesDevice;
 (function (typesDevice) {
@@ -58,36 +56,51 @@ var otherDripStandAddress;
     otherDripStandAddress[otherDripStandAddress["speed"] = 26] = "speed";
 })(otherDripStandAddress || (otherDripStandAddress = {}));
 let timeFunctionInterval = 5;
-let maxLightIdKeep = 5; //1~62
+let maxLightIdKeep = 62; //max acount of light in a gw loop
+let pollingTimeStep = 5;
 class ProModbus {
     constructor() {
         this.masterRs485 = new modbusDriver_1.ModbusRTU();
         this.process();
     }
+    //process 
     async process() {
-        let x = 0x1234;
-        await this.delay(1000);
+        await this.delay(1000); //wait modbus ready
+        if (this.masterRs485.isDeviceOk) {
+            await this.getNetworkLightNumber()
+                .then((value) => {
+                if (value.length > 0) {
+                    this.drivers = value;
+                    console.log("Found out lights:");
+                    console.log(value.toString());
+                }
+                else {
+                    this.drivers = [];
+                    console.log("no device");
+                }
+            });
+            this.pollingTime = 1000 - this.drivers.length * 10;
+            if (this.drivers.length > 0) {
+                //polling time 
+                setInterval(() => {
+                    this.pollingLocationInfo(); //ask input register location data
+                }, this.pollingTime);
+            }
+        }
+        else {
+            console.log('modbus stick is nor exist!');
+        }
         //get exist driver in network
-        await this.getNetworkLightNumber()
-            .then((value) => {
-            if (value.length > 0) {
-                console.log("Found out lights:");
-                this.drivers = value;
-                console.log(value.toString());
-            }
-            else {
-                this.drivers = [];
-                console.log("no device");
-            }
-        });
+    }
+    classfyDevice(devTable) {
+    }
+    async pollingLocationInfo() {
         for (let i = 0; i < this.drivers.length; i++) {
             console.log(this.drivers[i].lightID);
+            await this.delay(pollingTimeStep);
             await this.readLightDevice(this.drivers[i].lightID)
                 .then((value) => {
-                this.drivers[i].deviceTable = this.getDeviceTable(value);
-                this.drivers[i].deviceTable.forEach(item => {
-                    console.log(item);
-                });
+                this.drivers[i].deviceTable = this.getDeviceTable(this.drivers[i].lightID, value);
             });
         }
     }
@@ -96,11 +109,10 @@ class ProModbus {
         return new Promise((resolve, reject) => {
             let readableRegisterInfo = {};
             this.masterRs485.setSlave(id);
-            let readCount = inputregisterAddress.countReadableRegister - inputregisterAddress.readableRegisterGroup + 1;
-            this.masterRs485.readInputRegisters(inputregisterAddress.readableRegisterGroup, readCount)
+            let readCount = 1;
+            this.masterRs485.readInputRegisters(inputregisterAddress.countReadableRegister, readCount)
                 .then((value) => {
-                readableRegisterInfo.readableRegisterGroup = value[0];
-                readableRegisterInfo.countReadableRegister = value[1];
+                readableRegisterInfo.countReadableRegister = value[0];
                 resolve(readableRegisterInfo);
             })
                 .catch((errorMsg) => {
@@ -113,7 +125,7 @@ class ProModbus {
         this.masterRs485.setSlave(id);
         let arrayDevicRegister = [];
         return new Promise((resolve, reject) => {
-            let startRegisterAddress = (readableRegisterInfo.readableRegisterGroup == 0) ? inputregisterAddress.g0Device000 : inputregisterAddress.g1Device000;
+            let startRegisterAddress = inputregisterAddress.g0Device000;
             this.masterRs485.readInputRegisters(startRegisterAddress, readableRegisterInfo.countReadableRegister)
                 .then((value) => {
                 value.forEach(item => {
@@ -162,7 +174,7 @@ class ProModbus {
                 .catch((errorMsg) => {
                 console.log('Resopnse error:' + errorMsg);
             });
-            // await this.delay(timeFunctionInterval);
+            await this.delay(pollingTimeStep);
         }
         return new Promise((resolve, reject) => {
             resolve(driversKeep);
@@ -198,7 +210,7 @@ class ProModbus {
                         .catch((errorMsg) => {
                         reject(errorMsg);
                     });
-                }, timeFunctionInterval);
+                }, pollingTimeStep);
             })
                 .catch((errorMsg) => {
                 reject(errorMsg);
@@ -216,9 +228,6 @@ class ProModbus {
         num.forEach(item => {
             u8[i++] = (item >> 8) & 0xFF;
             u8[i++] = item & 0xFF;
-        });
-        u8.forEach((item) => {
-            console.log(item);
         });
         while (end < (u8.length - 1)) {
             if (u8[start] == typesDevice.tag) {
@@ -243,10 +252,7 @@ class ProModbus {
         return num;
     }
     //get device content
-    paserProtocol(u8) {
-        u8.forEach(item => {
-            console.log(item);
-        });
+    paserProtocol(recLightID, u8) {
         let dev = {};
         dev.type = u8[devAddress.type];
         dev.seq = u8[devAddress.seq];
@@ -258,7 +264,7 @@ class ProModbus {
         dev.lId2 = u8[devAddress.lId2];
         dev.br1 = this.byte2Number(u8[devAddress.br1], u8[devAddress.br1 + 1]);
         dev.br2 = this.byte2Number(u8[devAddress.br2], u8[devAddress.br2 + 1]);
-        dev.rssi = this.byte2Number(u8[devAddress.rssi], u8[devAddress.rssi + 1]);
+        dev.rssi = -1 * this.byte2Number(u8[devAddress.rssi], u8[devAddress.rssi + 1]);
         dev.Gx = u8[devAddress.Gx];
         dev.Gy = u8[devAddress.Gy];
         dev.Gz = u8[devAddress.Gz];
@@ -266,6 +272,7 @@ class ProModbus {
         dev.labelX = u8[devAddress.labelX];
         dev.labelY = u8[devAddress.labelY];
         dev.labelH = this.byte2Number(u8[devAddress.labelH], u8[devAddress.labelH + 1]);
+        dev.recLightID = recLightID;
         switch (u8[0]) {
             case typesDevice.tag:
                 dev.other = {};
@@ -277,14 +284,34 @@ class ProModbus {
                 dev.other = other;
                 break;
         }
+        /*
+        
+                if(this.deviceClassfy.length>0)
+                {
+                    this.deviceClassfy.forEach((item)=>
+                    {
+                        if(item.mac== dev.mac)
+                        {
+                            
+                        }
+                    }
+                }else
+                {
+        
+                }
+        
+        
+                
+                )
+                */
         return dev;
     }
     //get device table
-    getDeviceTable(num) {
+    getDeviceTable(recLightID, num) {
         let devInfo = [];
         let matrix = this.getNumber2Uint8Matrix(num);
         matrix.forEach(item => {
-            devInfo.push(this.paserProtocol(item));
+            devInfo.push(this.paserProtocol(recLightID, item));
         });
         return devInfo;
     }
