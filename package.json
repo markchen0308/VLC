@@ -11,6 +11,7 @@
     "@types/method-override": "^0.0.31",
     "@types/node": "^10.5.5",
     "@types/pg": "^7.4.10",
+    "@types/pg-format": "^1.0.0",
     "@types/serialport": "^6.0.4",
     "body-parser": "^1.18.3",
     "child": "^0.0.3",
@@ -20,8 +21,10 @@
     "method-override": "^3.0.0",
     "modbus-serial": "^7.4.2",
     "net": "^1.0.2",
+    "network": "^0.4.1",
     "os": "^0.1.1",
     "pg": "^7.4.3",
+    "pg-format": "^1.0.4",
     "process": "^0.11.10",
     "typescript": "^3.0.1"
   },
