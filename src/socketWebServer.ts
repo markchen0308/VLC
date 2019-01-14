@@ -44,9 +44,9 @@ export class SocketWebServer {
 
 
     }
-
-    sendMessage(cmd: DTCMD.iCmd) {
-        this.socket.write(JSON.stringify(cmd));
+    
+    sendMessage(res: any) {
+        this.socket.write(JSON.stringify(res));
     }
 
 

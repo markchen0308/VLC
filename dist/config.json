@@ -1,5 +1,5 @@
 {
-    "webserverIp":"192.168.1.7",
+    "webserverIp":"localhost",
     "webserverPort": 80,
    
     "dbUser": "postgres", 
@@ -12,7 +12,9 @@
     "scoketWebServerPort":10001,
 
     "scoketModbusServerIP":"localhost",
-    "scoketModbusServerPort":10002    
+    "scoketModbusServerPort":10002,  
+
+    "gwLanName":"wlp3s0"
 }
 
 

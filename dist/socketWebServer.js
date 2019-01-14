@@ -1,5 +1,4 @@
 "use strict";
-//let fs = require('fs');
 Object.defineProperty(exports, "__esModule", { value: true });
 const Net = require("net"); //import socket module
 const fs = require("fs");
@@ -25,12 +24,6 @@ class SocketWebServer {
         });
     }
     configureServer() {
-        //get reply information from server 
-        //this.socketWebserver.on('data', (data) => {
-        //       let cmdString:any=data
-        //       let cmd=JSON.parse(cmdString);
-        //      console.dir(cmd);
-        // });
         this.socketWebserver = Net.createServer(); //create server
         this.socketWebserver.listen(this.scoketWebServerPort, this.socketWebServerIP, () => {
             console.log('scoketWebServer started,ip:' + this.socketWebServerIP + ',port:' + this.scoketWebServerPort);
@@ -39,8 +32,8 @@ class SocketWebServer {
             console.log((new Date()).toLocaleString() + 'socketwebserver  is now closed');
         });
     }
-    sendMessage(cmd) {
-        this.socket.write(JSON.stringify(cmd));
+    sendMessage(res) {
+        this.socket.write(JSON.stringify(res));
     }
 }
 exports.SocketWebServer = SocketWebServer;

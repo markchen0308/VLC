@@ -7,6 +7,7 @@ const CP = require("child_process");
 let ModbusSer = require('modbus-serial');
 class ModbusRTU {
     constructor() {
+        // this.testProcess();
         this.exec = util.promisify(CP.exec);
         this.timeout = 100;
         this.rs485DeviceName = 'ttyUSB0';
@@ -14,26 +15,35 @@ class ModbusRTU {
         this.baudrate = 3000000; //baudrate =3m;
         this.modbus_Master = new ModbusSer();
         this.isDeviceOk = false;
-        // this.testProcess();
-        this.process();
+        // this.process();
     }
     async process() {
-        await this.checkRS485Device()
-            .then((rx) => {
+        await this.delay(1000);
+        let rx = await this.checkRS485Device();
+        if (rx) {
             //set Baudrate
             this.modbus_Master.connectRTU(this.devicePath, { baudRate: this.baudrate });
             //set limitation of response time
             this.modbus_Master.setTimeout(this.timeout);
             console.log(this.rs485DeviceName + ' is exist!');
-            //this.testProcess();
-        })
-            .catch((rx) => {
+        }
+        else {
             console.log(this.rs485DeviceName + ' is not exist!');
+        }
+        return new Promise((resolve, reject) => {
+            if (rx) {
+                console.log("return true");
+                resolve(true);
+            }
+            else {
+                resolve(false);
+            }
         });
     }
+    //----------------------------------------------------------------
     async checkRS485Device() {
         let rx = await this.exec('ls /dev/ | grep ' + this.rs485DeviceName);
-        //console.log(rx.stdout);
+        console.log(rx.stdout);
         if (rx.stdout.includes(this.rs485DeviceName)) {
             this.isDeviceOk = true;
             rx = await this.exec('chmod +x ' + this.devicePath); //set  executable
@@ -43,10 +53,10 @@ class ModbusRTU {
         }
         return new Promise((resolve, reject) => {
             if (this.isDeviceOk) {
-                resolve(this.isDeviceOk);
+                resolve(true);
             }
             else {
-                reject(this.isDeviceOk);
+                resolve(false);
             }
         });
     }
@@ -177,76 +187,4 @@ class ModbusRTU {
     }
 }
 exports.ModbusRTU = ModbusRTU;
-/*
-
-import * as Serialport from 'serialport';;//import serialport module
-//import {TypedEvent} from './typeEvent'
-
-let RS485_BUFFER_LENGTH: number = 264;
-let RS485_RX_BUFFER:number=240;
-export class Sercom {
-    public serialport: Serialport;
-    public _readBufIndex: number;
-    public _portName: string = '/dev/ttyUSB0';
-    public _portSpeed: number = 115200;
-    public flagExist: boolean = false;
-    public rawBuffer: any[] = [];
-
-    public rawBufferOk: boolean = false;
-
-
-    constructor() {
-        //this.initUart();
-
-    }
-
-
-
-
-    public async checkSerialPort(): Promise<any> {
-
-        let res = await Serialport.list().then(ports => {
-            //check uart list if  uart is  available
-            this.flagExist = ports.filter((item) => { return item.comName == this._portName });
-            if (this.flagExist = true) {
-                this.serialport = new Serialport(this._portName, { baudRate: this._portSpeed });
-                this.serialport.open(() => { });
-                return true;
-            }
-            else {
-                return false;
-            }
-
-        })
-            .catch(err => console.log('Uart Open Error:'+err));
-
-        return res;
-    }
-
-
-    public WriteRS485(data: Buffer): void {
-        this.serialport.write(data, (error: any) => {
-            if (error) {
-                console.log('Uart Write Error:', error.message);
-            }
-        });
-    }
-
-
-    public  ReadRS485() {
-        this.serialport.on('data', (data) => {
-            if (this.rawBuffer.length < RS485_BUFFER_LENGTH) {
-                data.forEach(element => {
-                    this.rawBuffer.push(element);
-                });
-                if(this.rawBuffer.length >= RS485_BUFFER_LENGTH)
-                {
-                    this.rawBufferOk = true;
-                    console.log(this.rawBuffer);
-                }
-            }
-        });
-    }
-}
-*/ 
 //# sourceMappingURL=modbusDriver.js.map
