@@ -34,32 +34,26 @@ export class ModbusRTU {
             this.modbus_Master.setTimeout(this.timeout);
             console.log(this.rs485DeviceName + ' is exist!');
         }
-
         else {
             console.log(this.rs485DeviceName + ' is not exist!');
         }
 
         return new Promise<boolean>((resolve, reject) => {
-
             if (rx) {
                 console.log("return true");
                 resolve(true);
             }
-
             else {
                 resolve(false);
-
             }
 
         });
     }
 
     //----------------------------------------------------------------
-
     async checkRS485Device(): Promise<boolean> {
 
         let rx = await this.exec('ls /dev/ | grep ' + this.rs485DeviceName);
-        console.log(rx.stdout);
         if (rx.stdout.includes(this.rs485DeviceName)) {
             this.isDeviceOk = true;
             rx = await this.exec('chmod +x ' + this.devicePath);//set  executable
@@ -77,19 +71,19 @@ export class ModbusRTU {
             }
         });
     }
-
+    //----------------------------------------------------------------
     delay(msec: number): Promise<boolean> {
         return new Promise<boolean>((resolve) => {
             setTimeout(() => { resolve(true) }, msec);
         });
     }
-
+    //----------------------------------------------------------------
     async testProcess() {
         //this.writeReadHoldingRegister();
         //this.writeReadHoldingRegisters();
         //this.readInputRegister();
         await this.delay(1000);
-        this.setSlave(7);
+        this.setSlaveID(7);
         await this.readHoldingRegisters(0, 6)
             .then((d) => {
                 console.log(d);
@@ -99,11 +93,11 @@ export class ModbusRTU {
                 console.log(errorMsg);
             });
     }
-
-    setSlave(id: number) {
+//----------------------------------------------------------------
+    setSlaveID(id: number) {
         this.modbus_Master.setID(id);
     }
-
+//----------------------------------------------------------------
     //FC1
     readCoilStatus(startAddress: number, readStatusNumber: number): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
@@ -117,11 +111,8 @@ export class ModbusRTU {
                     reject(e.message);
                 });
         });
-
-
     }
-
-
+//----------------------------------------------------------------
     //FC3
     readHoldingRegisters(startAddress: number, regNum: number): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
@@ -137,7 +128,7 @@ export class ModbusRTU {
         });
 
     }
-
+//----------------------------------------------------------------
     //FC4
     readInputRegisters(startAddress: number, regNum: number): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
@@ -148,11 +139,10 @@ export class ModbusRTU {
                 })
                 .catch((e) => {
                     reject(e.message)
-
                 });
         });
     }
-
+//----------------------------------------------------------------
     //FC6
     writeSingleRegister(startAddress: number, regValue: number): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
@@ -167,7 +157,7 @@ export class ModbusRTU {
                 })
         });
     }
-
+//----------------------------------------------------------------
     //FC16 
     writeRegisters(startAddress: number, regValues: number[]): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
@@ -182,10 +172,8 @@ export class ModbusRTU {
                     reject(e.message);
                 })
         });
-
     }
-
-
+//----------------------------------------------------------------
     writeReadHoldingRegister() {
         //FC6
         this.regStartAddress = 0x01;
@@ -200,7 +188,7 @@ export class ModbusRTU {
             this.readHoldingRegisters(this.regStartAddress, this.registerNum);
         }, 2000);
     }
-
+//----------------------------------------------------------------
 
     writeReadHoldingRegisters() {
         //FC16
@@ -216,7 +204,7 @@ export class ModbusRTU {
             this.readHoldingRegisters(this.regStartAddress, this.registerNum);
         }, 2000);
     }
-
+//----------------------------------------------------------------
     readInputRegister() {
         //FC4 
         this.regStartAddress = 0x01;
@@ -226,7 +214,7 @@ export class ModbusRTU {
         }, 1000);
     }
 }
-
+//----------------------------------------------------------------
 
 
 

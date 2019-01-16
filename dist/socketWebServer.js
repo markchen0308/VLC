@@ -11,15 +11,15 @@ class SocketWebServer {
         this.startServer();
     }
     async startServer() {
-        await this.readConfigFile();
-        this.configureServer();
+        await this.readConfigFile(); //read webserver setting
+        this.configureServer(); //set up webserver 
     }
     readConfigFile() {
         return new Promise((resolve, reject) => {
             let configJsonFile = fs.readFileSync(configfilePath, 'utf8'); //read config.json file
             let configJson = JSON.parse(configJsonFile); //parse coonfig.json file
-            this.scoketWebServerPort = configJson.scoketWebServerPort;
-            this.socketWebServerIP = configJson.socketWebServerIP;
+            this.scoketWebServerPort = configJson.scoketWebServerPort; //get port
+            this.socketWebServerIP = configJson.socketWebServerIP; //get ip
             resolve(true);
         });
     }

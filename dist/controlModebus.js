@@ -4,65 +4,7 @@ const Net = require("net"); //import socket module
 let fs = require('fs');
 let configfilePath = './config.json';
 const modbusDriver_1 = require("./modbusDriver");
-var holdingRegisterAddress;
-(function (holdingRegisterAddress) {
-    holdingRegisterAddress[holdingRegisterAddress["brightness"] = 0] = "brightness";
-    holdingRegisterAddress[holdingRegisterAddress["ck"] = 1] = "ck";
-    holdingRegisterAddress[holdingRegisterAddress["brightnessMin"] = 2] = "brightnessMin";
-    holdingRegisterAddress[holdingRegisterAddress["brightnessMax"] = 3] = "brightnessMax";
-    holdingRegisterAddress[holdingRegisterAddress["ckMin"] = 4] = "ckMin";
-    holdingRegisterAddress[holdingRegisterAddress["ckMax"] = 5] = "ckMax";
-})(holdingRegisterAddress || (holdingRegisterAddress = {}));
-var inputregisterAddress;
-(function (inputregisterAddress) {
-    inputregisterAddress[inputregisterAddress["version"] = 0] = "version";
-    inputregisterAddress[inputregisterAddress["lightID"] = 1] = "lightID";
-    inputregisterAddress[inputregisterAddress["lightType"] = 2] = "lightType";
-    inputregisterAddress[inputregisterAddress["lightMacH"] = 3] = "lightMacH";
-    inputregisterAddress[inputregisterAddress["lightMacM"] = 4] = "lightMacM";
-    inputregisterAddress[inputregisterAddress["lightMacL"] = 5] = "lightMacL";
-    inputregisterAddress[inputregisterAddress["manufactureID"] = 6] = "manufactureID";
-    inputregisterAddress[inputregisterAddress["countReadableRegister"] = 10] = "countReadableRegister";
-    inputregisterAddress[inputregisterAddress["g0Device000"] = 11] = "g0Device000";
-})(inputregisterAddress || (inputregisterAddress = {}));
-var typesDevice;
-(function (typesDevice) {
-    typesDevice[typesDevice["tag"] = 1] = "tag";
-    typesDevice[typesDevice["dripStand"] = 2] = "dripStand";
-})(typesDevice || (typesDevice = {}));
-var deviceLength;
-(function (deviceLength) {
-    deviceLength[deviceLength["tagLen"] = 24] = "tagLen";
-    deviceLength[deviceLength["dripStandLen"] = 28] = "dripStandLen"; //bytes
-})(deviceLength || (deviceLength = {}));
-var devAddress;
-(function (devAddress) {
-    devAddress[devAddress["type"] = 0] = "type";
-    devAddress[devAddress["seq"] = 1] = "seq";
-    devAddress[devAddress["Mac"] = 2] = "Mac";
-    devAddress[devAddress["lId1"] = 8] = "lId1";
-    devAddress[devAddress["lId2"] = 9] = "lId2";
-    devAddress[devAddress["br1"] = 10] = "br1";
-    devAddress[devAddress["br2"] = 12] = "br2";
-    devAddress[devAddress["rssi"] = 14] = "rssi";
-    devAddress[devAddress["Gx"] = 16] = "Gx";
-    devAddress[devAddress["Gy"] = 17] = "Gy";
-    devAddress[devAddress["Gz"] = 18] = "Gz";
-    devAddress[devAddress["batPow"] = 19] = "batPow";
-    devAddress[devAddress["labelX"] = 20] = "labelX";
-    devAddress[devAddress["labelY"] = 21] = "labelY";
-    devAddress[devAddress["labelH"] = 22] = "labelH";
-})(devAddress || (devAddress = {}));
-var otherDripStandAddress;
-(function (otherDripStandAddress) {
-    otherDripStandAddress[otherDripStandAddress["weight"] = 24] = "weight";
-    otherDripStandAddress[otherDripStandAddress["speed"] = 26] = "speed";
-})(otherDripStandAddress || (otherDripStandAddress = {}));
-var modbusCmd;
-(function (modbusCmd) {
-    modbusCmd[modbusCmd["driverInfo"] = 1] = "driverInfo";
-    modbusCmd[modbusCmd["location"] = 2] = "location";
-})(modbusCmd || (modbusCmd = {}));
+const dataTypeModbus_1 = require("./dataTypeModbus");
 let timeFunctionInterval = 5;
 let maxLightIdKeep = 62; //max acount of light in a gw loop
 let pollingTimeStep = 5; //polling time per light
@@ -77,7 +19,7 @@ class ControlModbus {
         this.process();
     }
     async process() {
-        this.startClient(); //connect to server
+        this.startModbusClient(); //create modbus client and connect to modbus server
         this.flagModbusStatus = await this.masterRs485.process(); //open modbus
         // await this.delay(1000);//wait modbus ready
         if (this.flagServerStatus && this.flagModbusStatus) //server connected and modbus is ready
@@ -95,17 +37,17 @@ class ControlModbus {
         }
     }
     //-----------------------------------------------------------------------
-    async startClient() {
-        await this.readConfigFile();
-        this.configureClient();
+    async startModbusClient() {
+        await this.readConfigFile(); //read config.json
+        this.configureClient(); // connect to modbus server
     }
     //----------------------------------------------------------------------------
     readConfigFile() {
         return new Promise((resolve, reject) => {
             let configJsonFile = fs.readFileSync(configfilePath, 'utf8'); //read config.json file
             let configJson = JSON.parse(configJsonFile); //parse coonfig.json file
-            this.modbusServerPort = configJson.scoketModbusServerPort;
-            this.modbusServerIP = configJson.scoketModbusServerIP;
+            this.modbusServerPort = configJson.scoketModbusServerPort; //get server port
+            this.modbusServerIP = configJson.scoketModbusServerIP; //get server ip
             resolve(true);
         });
     }
@@ -140,7 +82,7 @@ class ControlModbus {
                 console.log("Found out lights:");
                 console.log(value.toString());
                 let cmd = {
-                    cmdtype: modbusCmd.driverInfo,
+                    cmdtype: dataTypeModbus_1.modbusCmd.driverInfo,
                     cmdData: this.drivers
                 };
                 //send driver status to controprocess
@@ -174,7 +116,7 @@ class ControlModbus {
         }
         //write to server
         let cmd = {
-            cmdtype: modbusCmd.location,
+            cmdtype: dataTypeModbus_1.modbusCmd.location,
             cmdData: this.devPkgMember
         };
         //send location information to controlprocess
@@ -187,7 +129,7 @@ class ControlModbus {
             let readableRegisterInfo = {};
             this.masterRs485.setSlave(id);
             let readCount = 1;
-            this.masterRs485.readInputRegisters(inputregisterAddress.countReadableRegister, readCount)
+            this.masterRs485.readInputRegisters(dataTypeModbus_1.inputregisterAddress.countReadableRegister, readCount)
                 .then((value) => {
                 readableRegisterInfo.countReadableRegister = value[0];
                 resolve(readableRegisterInfo);
@@ -203,7 +145,7 @@ class ControlModbus {
         this.masterRs485.setSlave(id);
         let arrayDevicRegister = [];
         return new Promise((resolve, reject) => {
-            let startRegisterAddress = inputregisterAddress.g0Device000;
+            let startRegisterAddress = dataTypeModbus_1.inputregisterAddress.g0Device000;
             this.masterRs485.readInputRegisters(startRegisterAddress, readableRegisterInfo.countReadableRegister)
                 .then((value) => {
                 value.forEach(item => {
@@ -265,25 +207,25 @@ class ControlModbus {
         return new Promise((resolve, reject) => {
             let driverInfo = {};
             this.masterRs485.setSlave(id);
-            let readCount = inputregisterAddress.manufactureID + 1;
-            this.masterRs485.readInputRegisters(inputregisterAddress.version, readCount)
+            let readCount = dataTypeModbus_1.inputregisterAddress.manufactureID + 1;
+            this.masterRs485.readInputRegisters(dataTypeModbus_1.inputregisterAddress.version, readCount)
                 .then((value) => {
                 //console.log(value);
-                driverInfo.version = value[inputregisterAddress.version];
-                driverInfo.lightID = value[inputregisterAddress.lightID];
-                driverInfo.lightType = value[inputregisterAddress.lightType];
-                driverInfo.Mac = value[inputregisterAddress.lightMacH].toString(16) + value[inputregisterAddress.lightMacM].toString(16) + value[inputregisterAddress.lightMacL].toString(16);
-                driverInfo.manufactureID = value[inputregisterAddress.manufactureID];
-                readCount = holdingRegisterAddress.ckMax + 1;
+                driverInfo.version = value[dataTypeModbus_1.inputregisterAddress.version];
+                driverInfo.lightID = value[dataTypeModbus_1.inputregisterAddress.lightID];
+                driverInfo.lightType = value[dataTypeModbus_1.inputregisterAddress.lightType];
+                driverInfo.Mac = value[dataTypeModbus_1.inputregisterAddress.lightMacH].toString(16) + value[dataTypeModbus_1.inputregisterAddress.lightMacM].toString(16) + value[dataTypeModbus_1.inputregisterAddress.lightMacL].toString(16);
+                driverInfo.manufactureID = value[dataTypeModbus_1.inputregisterAddress.manufactureID];
+                readCount = dataTypeModbus_1.holdingRegisterAddress.ckMax + 1;
                 setTimeout(() => {
-                    this.masterRs485.readHoldingRegisters(holdingRegisterAddress.brightness, readCount)
+                    this.masterRs485.readHoldingRegisters(dataTypeModbus_1.holdingRegisterAddress.brightness, readCount)
                         .then(value => {
-                        driverInfo.brightness = value[holdingRegisterAddress.brightness];
-                        driverInfo.ck = value[holdingRegisterAddress.ck];
-                        driverInfo.brightnessMin = value[holdingRegisterAddress.brightnessMin];
-                        driverInfo.brightnessMax = value[holdingRegisterAddress.brightnessMax];
-                        driverInfo.ckMin = value[holdingRegisterAddress.ckMin];
-                        driverInfo.ckMax = value[holdingRegisterAddress.ckMax];
+                        driverInfo.brightness = value[dataTypeModbus_1.holdingRegisterAddress.brightness];
+                        driverInfo.ck = value[dataTypeModbus_1.holdingRegisterAddress.ck];
+                        driverInfo.brightnessMin = value[dataTypeModbus_1.holdingRegisterAddress.brightnessMin];
+                        driverInfo.brightnessMax = value[dataTypeModbus_1.holdingRegisterAddress.brightnessMax];
+                        driverInfo.ckMin = value[dataTypeModbus_1.holdingRegisterAddress.ckMin];
+                        driverInfo.ckMax = value[dataTypeModbus_1.holdingRegisterAddress.ckMax];
                         resolve(driverInfo);
                     })
                         .catch((errorMsg) => {
@@ -310,11 +252,11 @@ class ControlModbus {
             u8[i++] = item & 0xFF;
         });
         while (end < (u8.length - 1)) {
-            if (u8[start] == typesDevice.tag) {
-                len = deviceLength.tagLen;
+            if (u8[start] == dataTypeModbus_1.typesDevice.tag) {
+                len = dataTypeModbus_1.deviceLength.tagLen;
             }
-            else if (u8[start] == typesDevice.dripStand) {
-                len = deviceLength.dripStandLen;
+            else if (u8[start] == dataTypeModbus_1.typesDevice.dripStand) {
+                len = dataTypeModbus_1.deviceLength.dripStandLen;
             }
             else {
                 break;
@@ -336,33 +278,33 @@ class ControlModbus {
     //get device content
     paserProtocol2Dev(recLightID, u8) {
         let dev = {};
-        dev.type = u8[devAddress.type];
-        dev.seq = u8[devAddress.seq];
+        dev.type = u8[dataTypeModbus_1.devAddress.type];
+        dev.seq = u8[dataTypeModbus_1.devAddress.seq];
         dev.mac = '';
         for (let i = 0; i < 6; i++) {
-            dev.mac += u8[devAddress.Mac + i].toString(16);
+            dev.mac += u8[dataTypeModbus_1.devAddress.Mac + i].toString(16);
         }
-        dev.lId1 = u8[devAddress.lId1];
-        dev.lId2 = u8[devAddress.lId2];
-        dev.br1 = this.byte2Number(u8[devAddress.br1], u8[devAddress.br1 + 1]);
-        dev.br2 = this.byte2Number(u8[devAddress.br2], u8[devAddress.br2 + 1]);
-        dev.rssi = -1 * this.byte2Number(u8[devAddress.rssi], u8[devAddress.rssi + 1]);
-        dev.Gx = u8[devAddress.Gx];
-        dev.Gy = u8[devAddress.Gy];
-        dev.Gz = u8[devAddress.Gz];
-        dev.batPow = u8[devAddress.batPow];
-        dev.labelX = u8[devAddress.labelX];
-        dev.labelY = u8[devAddress.labelY];
-        dev.labelH = this.byte2Number(u8[devAddress.labelH], u8[devAddress.labelH + 1]);
+        dev.lId1 = u8[dataTypeModbus_1.devAddress.lId1];
+        dev.lId2 = u8[dataTypeModbus_1.devAddress.lId2];
+        dev.br1 = this.byte2Number(u8[dataTypeModbus_1.devAddress.br1], u8[dataTypeModbus_1.devAddress.br1 + 1]);
+        dev.br2 = this.byte2Number(u8[dataTypeModbus_1.devAddress.br2], u8[dataTypeModbus_1.devAddress.br2 + 1]);
+        dev.rssi = -1 * this.byte2Number(u8[dataTypeModbus_1.devAddress.rssi], u8[dataTypeModbus_1.devAddress.rssi + 1]);
+        dev.Gx = u8[dataTypeModbus_1.devAddress.Gx];
+        dev.Gy = u8[dataTypeModbus_1.devAddress.Gy];
+        dev.Gz = u8[dataTypeModbus_1.devAddress.Gz];
+        dev.batPow = u8[dataTypeModbus_1.devAddress.batPow];
+        dev.labelX = u8[dataTypeModbus_1.devAddress.labelX];
+        dev.labelY = u8[dataTypeModbus_1.devAddress.labelY];
+        dev.labelH = this.byte2Number(u8[dataTypeModbus_1.devAddress.labelH], u8[dataTypeModbus_1.devAddress.labelH + 1]);
         dev.recLightID = recLightID;
         switch (u8[0]) {
-            case typesDevice.tag:
+            case dataTypeModbus_1.typesDevice.tag:
                 dev.other = {};
                 break;
-            case typesDevice.dripStand:
+            case dataTypeModbus_1.typesDevice.dripStand:
                 let other = {};
-                other.weight = this.byte2Number(u8[otherDripStandAddress.weight], u8[otherDripStandAddress.weight + 1]);
-                other.speed = this.byte2Number(u8[otherDripStandAddress.speed], u8[otherDripStandAddress.speed + 1]);
+                other.weight = this.byte2Number(u8[dataTypeModbus_1.otherDripStandAddress.weight], u8[dataTypeModbus_1.otherDripStandAddress.weight + 1]);
+                other.speed = this.byte2Number(u8[dataTypeModbus_1.otherDripStandAddress.speed], u8[dataTypeModbus_1.otherDripStandAddress.speed + 1]);
                 dev.other = other;
                 break;
         }
@@ -372,27 +314,64 @@ class ControlModbus {
     //group device by device mac
     sortDev(dev) {
         let isContainDevice = false;
-        if (this.devPkgMember.length > 0) {
+        if (this.devPkgMember.length > 0) //devPkgMember is not empty
+         {
             for (let i = 0; i < this.devPkgMember.length; i++) {
-                if (this.devPkgMember[i].deviceMac == dev.mac) {
-                    this.devPkgMember[i].deviceInfoArry.push(dev);
-                    this.devPkgMember[i].deviceCount += 1;
-                    isContainDevice = true;
-                    break;
+                if (this.devPkgMember[i].mac == dev.mac) //does devPkgMember contain device?
+                 {
+                    let rxLightInfo = { recLightID: dev.recLightID, rssi: dev.rssi };
+                    this.devPkgMember[i].rxLightCount += 1;
+                    this.devPkgMember[i].rxLightInfo.push(rxLightInfo); //save device into deviceInfoArry
+                    isContainDevice = true; //mark 
+                    break; //break the loop
                 }
             }
-            if (isContainDevice == false) {
-                let devPkg = { deviceMac: dev.mac, deviceCount: 0, deviceInfoArry: [] };
-                devPkg.deviceInfoArry.push(dev);
-                devPkg.deviceCount += 1;
-                this.devPkgMember.push(devPkg);
+            if (isContainDevice == false) //devPkgMember does not contain device
+             {
+                let devPkg = {};
+                devPkg.type = dev.type;
+                devPkg.mac = dev.mac;
+                devPkg.seq = dev.seq;
+                devPkg.lId1 = dev.lId1;
+                devPkg.lId2 = dev.lId2;
+                devPkg.br1 = dev.br1;
+                devPkg.br2 = dev.br2;
+                devPkg.Gx = dev.Gx;
+                devPkg.Gy = dev.Gy;
+                devPkg.Gz = dev.Gz;
+                devPkg.batPow = dev.batPow;
+                devPkg.labelY = dev.labelX;
+                devPkg.labelY = dev.labelY;
+                devPkg.other = dev.other;
+                devPkg.rxLightCount = 1;
+                devPkg.rxLightInfo = [];
+                let rxLightInfo = { recLightID: dev.recLightID, rssi: dev.rssi };
+                devPkg.rxLightInfo.push(rxLightInfo);
+                this.devPkgMember.push(devPkg); //save devPkg into devPkgMember
             }
         }
-        else {
-            let devPkg = { deviceMac: dev.mac, deviceCount: 0, deviceInfoArry: [] };
-            devPkg.deviceInfoArry.push(dev);
-            devPkg.deviceCount += 1;
-            this.devPkgMember.push(devPkg);
+        else //devPkgMember is empty, 
+         {
+            let devPkg = {};
+            devPkg.type = dev.type;
+            devPkg.mac = dev.mac;
+            devPkg.seq = dev.seq;
+            devPkg.lId1 = dev.lId1;
+            devPkg.lId2 = dev.lId2;
+            devPkg.br1 = dev.br1;
+            devPkg.br2 = dev.br2;
+            devPkg.Gx = dev.Gx;
+            devPkg.Gy = dev.Gy;
+            devPkg.Gz = dev.Gz;
+            devPkg.batPow = dev.batPow;
+            devPkg.labelY = dev.labelX;
+            devPkg.labelY = dev.labelY;
+            devPkg.other = dev.other;
+            devPkg.rxLightCount = 1;
+            devPkg.rxLightInfo = [];
+            let rxLightInfo = { recLightID: dev.recLightID, rssi: dev.rssi };
+            devPkg.rxLightInfo.push(rxLightInfo);
+            this.devPkgMember.push(devPkg); //save devPkg into devPkgMember
         }
     }
     //----------------------------------------------------------------------------------

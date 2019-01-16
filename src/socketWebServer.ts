@@ -17,16 +17,16 @@ export class SocketWebServer {
 
 
     async startServer() {
-        await this.readConfigFile();
-        this.configureServer();
+        await this.readConfigFile();//read webserver setting
+        this.configureServer();//set up webserver 
     }
 
     readConfigFile(): Promise<any> {
         return new Promise<any>((resolve, reject) => {
             let configJsonFile = fs.readFileSync(configfilePath, 'utf8');//read config.json file
             let configJson = JSON.parse(configJsonFile);//parse coonfig.json file
-            this.scoketWebServerPort = configJson.scoketWebServerPort;
-            this.socketWebServerIP = configJson.socketWebServerIP;
+            this.scoketWebServerPort = configJson.scoketWebServerPort;//get port
+            this.socketWebServerIP = configJson.socketWebServerIP;//get ip
             resolve(true);
         });
     }
@@ -41,8 +41,6 @@ export class SocketWebServer {
         this.socketWebserver.on('close', () => {
             console.log((new Date()).toLocaleString() + 'socketwebserver  is now closed');
         });
-
-
     }
     
     sendMessage(res: any) {
