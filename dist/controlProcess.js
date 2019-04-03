@@ -7,11 +7,24 @@ const pgControl_1 = require("./pgControl");
 const dataTypeModbus_1 = require("./dataTypeModbus");
 let saveDatabasePeriod = 6000; //60 sec
 let MaxDataQueueLength = 3;
+var replyType;
+(function (replyType) {
+    replyType[replyType["failID"] = 0] = "failID";
+    replyType[replyType["failBrightness"] = 1] = "failBrightness";
+    replyType[replyType["failCT"] = 2] = "failCT";
+    replyType[replyType["failXY"] = 3] = "failXY";
+    replyType[replyType["okBrightness"] = 4] = "okBrightness";
+    replyType[replyType["okCT"] = 5] = "okCT";
+    replyType[replyType["okXY"] = 6] = "okXY";
+    replyType[replyType["okReset"] = 7] = "okReset";
+    replyType[replyType["okQueryLocation"] = 8] = "okQueryLocation";
+})(replyType || (replyType = {}));
 class ControlProcess {
     constructor() {
         this.webServer = new socketWebServer_1.SocketWebServer();
         this.modbusServer = new socketModbusServer_1.SocketModbusServer();
         this.pgCntrol = new pgControl_1.PgControl();
+        this.drivers = [];
         this.gwSeq = 0;
         this.GatewayHistoryMember = [];
         this.latestNGwInf = []; //save the lastest 3 gwinf in memory
@@ -29,7 +42,7 @@ class ControlProcess {
         await this.delay(1000); //delay 100 msecond
         this.listenWebserver(); //start listen webserver
         this.listenModbusServer(); //start listen modbus server
-        this.savingProcess();
+        this.savingProcess(); //save history data
         this.webtest(); //test webserver
     }
     //-----------------------------------------------------------------------------------------------------------
@@ -56,28 +69,10 @@ class ControlProcess {
             this.modbusServer.socket = socket;
             let clientName = `${this.modbusServer.socket.remoteAddress}:${this.modbusServer.socket.remotePort}`;
             console.log("connection from " + clientName);
+            //get data from modbus
             this.modbusServer.socket.on('data', (data) => {
-                let cmd = JSON.parse(data);
-                console.dir(cmd);
-                switch (cmd.cmdtype) {
-                    case dataTypeModbus_1.modbusCmd.driverInfo:
-                        this.drivers = cmd.cmdData;
-                        break;
-                    case dataTypeModbus_1.modbusCmd.driverInfo:
-                        this.gwSeq++; //seq +1
-                        let devPkg = cmd.cmdData;
-                        let gwInf = {
-                            GatewaySeq: this.gwSeq,
-                            GatewayIP: this.GwIP,
-                            GatewayMAC: this.GwMAC,
-                            Datetime: new Date().toLocaleString(),
-                            devPkgCount: devPkg.length,
-                            devPkgMember: devPkg
-                        };
-                        this.saveGwInfDataInLimitQueue(gwInf, MaxDataQueueLength);
-                        this.GatewayHistoryMember.push(gwInf); //save to memory
-                        break;
-                }
+                let cmd = JSON.parse(data); //parse JSON data
+                this.parseModbusCmd(cmd); //parse protocol
             });
             this.modbusServer.socket.on('close', () => {
                 console.log(`connection from ${clientName} closed`);
@@ -85,9 +80,37 @@ class ControlProcess {
             this.modbusServer.socket.on('error', (err) => {
                 console.log(`Connection ${clientName} error: ${err.message}`);
             });
+            this.latestNGwInf.length = 0; //clear buffer
+            this.GatewayHistoryMember.length = 0; //clear buffer
         });
     }
+    //------------------------------------------------------------------------------
+    parseModbusCmd(cmd) {
+        switch (cmd.cmdtype) {
+            case dataTypeModbus_1.modbusCmd.driverInfo: //driverInfo[]
+                this.drivers.length = 0; //clear driver
+                this.drivers = cmd.cmdData; //get driverInfo[] and save it
+                console.dir(this.drivers);
+                break;
+            case dataTypeModbus_1.modbusCmd.location:
+                this.gwSeq++; //seq +1
+                let devPkg = cmd.cmdData;
+                let gwInf = {
+                    GatewaySeq: this.gwSeq,
+                    GatewayIP: this.GwIP,
+                    GatewayMAC: this.GwMAC,
+                    Datetime: new Date().toLocaleString(),
+                    devPkgCount: devPkg.length,
+                    devPkgMember: devPkg
+                };
+                // console.dir(gwInf);//show 
+                this.saveGwInfDataInLimitQueue(gwInf, MaxDataQueueLength); //save in last n queue
+                this.GatewayHistoryMember.push(gwInf); //save to history memory
+                break;
+        }
+    }
     //----------------------------------------------------------------------------------------
+    //get the gateway network ip and mac
     getNetworkInformation() {
         return new Promise((resolve, reject) => {
             network.get_active_interface((err, obj) => {
@@ -115,8 +138,68 @@ class ControlProcess {
     getLastGwInfData() {
         return this.latestNGwInf.slice(-1)[0]; //return last data
     }
+    //-------------------------------------------------------------------------
+    replyWebseverOk(sel) {
+        let webPkg = {};
+        webPkg.reply = 1;
+        switch (sel) {
+            case replyType.okBrightness:
+                webPkg.msg = "dimming brightness ok";
+                break;
+            case replyType.okCT:
+                webPkg.msg = "dimming color temperature ok";
+                break;
+            case replyType.okReset:
+                webPkg.msg = "reset ok";
+                break;
+            case replyType.okXY:
+                webPkg.msg = "Dim XY ok";
+                break;
+        }
+        this.webServer.sendMessage(JSON.stringify(webPkg));
+    }
+    //-------------------------------------------------------------------------
+    replyWebseverFail(sel) {
+        let webPkg = {};
+        webPkg.reply = 0;
+        switch (sel) {
+            case replyType.failID:
+                webPkg.msg = "Driver ID is not exist.";
+                break;
+            case replyType.failBrightness:
+                webPkg.msg = "Dimming brightness is wrong.";
+                break;
+            case replyType.failCT:
+                webPkg.msg = "Dimming color temperature is wrong";
+                break;
+            case replyType.failXY:
+                webPkg.msg = "Dimming XY fail";
+                break;
+        }
+        this.webServer.sendMessage(JSON.stringify(webPkg));
+    }
+    //-------------------------------------------------------------------------
     //--------------------------------------------------------------------------
-    parseWebCmd(cmd) {
+    async parseWebCmd(cmd) {
+        let driver;
+        let cmdLightID = 0;
+        let index = -1;
+        //check control cmd's driver if exist
+        if ((cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingBrightness) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingCT) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingXY) || cmd.cmdtype == dataTypeModbus_1.webCmd.getDriver) {
+            if (cmd.cmdData.driverId == 255) // all driver
+             {
+                index = 255;
+            }
+            else { // find out driver number index
+                for (let j = 0; j < this.drivers.length; j++) {
+                    if (cmd.cmdData.driverId == this.drivers[j].lightID) {
+                        index = j;
+                        console.log("index=" + index);
+                        break;
+                    }
+                }
+            }
+        }
         switch (cmd.cmdtype) {
             case dataTypeModbus_1.webCmd.getTodaylast: //get today last data
                 this.replyWebCmdGetTodayLast();
@@ -135,20 +218,27 @@ class ControlProcess {
                 let cmdDate = cmd.cmdData;
                 this.replyWebCmdGetSomeDate(cmdDate.year, cmdDate.month, cmdDate.date);
                 break;
+            case dataTypeModbus_1.webCmd.getDriver:
+                this.replyWebCmdGetDriverInfo(index);
+                break;
             case dataTypeModbus_1.webCmd.postReset:
                 this.exeWebCmdPostReset();
                 break;
             case dataTypeModbus_1.webCmd.postDimingBrightness:
-                let cmdBrightness = cmd.cmdData;
-                this.exeWebCmdPostBrightness(cmdBrightness.brightness, cmdBrightness.driverID);
+                this.exeWebCmdPostBrightness(index, cmd);
                 break;
             case dataTypeModbus_1.webCmd.postDimingCT:
-                let cmdDimingCT = cmd.cmdData;
-                this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
+                if (index == 255) {
+                    this.exeWebCmdPostDimTemperatureAll(cmd);
+                }
+                else {
+                    console.log('test');
+                    this.exeWebCmdPostDimTemperature(index, cmd);
+                }
+                // this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
                 break;
             case dataTypeModbus_1.webCmd.postDimingXY:
-                let cmdDimingXY = cmd.cmdData;
-                this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
+                this.exeWebCmdPostDimColoXY(index, cmd);
                 break;
         }
     }
@@ -157,7 +247,7 @@ class ControlProcess {
         if (this.GatewayHistoryMember.length > 0) //not empty
          {
             //copy GatewayHistoryMember array
-            let saveData = this.GatewayHistoryMember.slice(0, this.GatewayHistoryMember.length);
+            let saveData = this.GatewayHistoryMember.slice(0, this.GatewayHistoryMember.length); //cpoy data
             this.GatewayHistoryMember.length = 0; //clear GatewayHistoryMember array
             this.pgCntrol.dbInsertPacth(this.pgCntrol.tableName, saveData)
                 .then(() => {
@@ -167,9 +257,15 @@ class ControlProcess {
     }
     //----------------------------------------------------------------------------------------
     savingProcess() {
+        this.fSaveDbEn = true;
         //peroid timer 
         this.pSaveDB = setInterval(() => {
-            this.saveHistory2DB();
+            if (this.fSaveDbEn == true) {
+                this.saveHistory2DB();
+            }
+            else {
+                clearInterval(this.pSaveDB); //stop timer
+            }
         }, saveDatabasePeriod); //execute cmd per saveDatabasePeriod msec
     }
     //---------------------------------------------------------------
@@ -177,17 +273,22 @@ class ControlProcess {
         let webPkg = {};
         if (this.latestNGwInf.length > 0) {
             let gwinf = this.getLastGwInfData(); //get last data
+            let gwInfoList = [];
+            gwInfoList.push(gwinf);
             let gwPkg = {
-                GatewaySeqMin: gwinf.GatewaySeq,
-                GatewaySeqMax: gwinf.GatewaySeq,
-                DateTimeMin: gwinf.Datetime,
-                DateTimeMax: gwinf.Datetime,
+                GatewaySeqMin: gwInfoList[0].GatewaySeq,
+                GatewaySeqMax: gwInfoList[0].GatewaySeq,
+                DateTimeMin: gwInfoList[0].Datetime,
+                DateTimeMax: gwInfoList[0].Datetime,
                 GatewayHistoryCount: 1,
-                GatewayHistoryMember: [gwinf]
+                GatewayHistoryMember: gwInfoList
             };
             webPkg.reply = 1;
             webPkg.msg = gwPkg;
-            this.webServer.sendMessage(JSON.stringify(webPkg));
+            let webMsg = JSON.stringify(webPkg);
+            console.log("web msg");
+            console.dir(webMsg);
+            this.webServer.sendMessage(webMsg);
         }
         else {
             let gwPkg = {
@@ -251,6 +352,7 @@ class ControlProcess {
         this.saveHistory2DB(); //save history to db
         this.pgCntrol.queryAll(this.pgCntrol.tableName)
             .then((value) => {
+            console.log(value);
             let GatewayHistoryMember;
             if (value.rows.length > 0) {
                 let index_last = value.rows.length - 1;
@@ -285,6 +387,13 @@ class ControlProcess {
                 webPkg.msg = gwPkg;
                 this.webServer.sendMessage(JSON.stringify(webPkg));
             }
+        })
+            .catch((reason) => {
+            let webPkg = {};
+            webPkg.reply = 0;
+            let msg = "no table name!";
+            webPkg.msg = msg;
+            this.webServer.sendMessage(JSON.stringify(webPkg));
         });
     }
     //----------------------------------------------------------------------------------------
@@ -326,6 +435,13 @@ class ControlProcess {
                 webPkg.msg = gwPkg;
                 this.webServer.sendMessage(JSON.stringify(webPkg));
             }
+        })
+            .catch((reason) => {
+            let webPkg = {};
+            webPkg.reply = 0;
+            let msg = "no table name!";
+            webPkg.msg = msg;
+            this.webServer.sendMessage(JSON.stringify(webPkg));
         });
     }
     //---------------------------------------------------------------------------------------
@@ -333,7 +449,7 @@ class ControlProcess {
         let webPkg = {};
         this.pgCntrol.queryAll(this.pgCntrol.getSomeDateTableName(year, month, date))
             .then((value) => {
-            let GatewayHistoryMember;
+            let GatewayHistoryMember = [];
             if (value.rows.length > 0) {
                 let index_last = value.rows.length - 1;
                 let lastGwInf = value.rows[index_last].gatewaydata;
@@ -367,35 +483,152 @@ class ControlProcess {
                 webPkg.msg = gwPkg;
                 this.webServer.sendMessage(JSON.stringify(webPkg));
             }
+        })
+            .catch((reason) => {
+            let webPkg = {};
+            webPkg.reply = 0;
+            let msg = "no table name!";
+            webPkg.msg = msg;
+            this.webServer.sendMessage(JSON.stringify(webPkg));
         });
     }
     //---------------------------------------------------------------------------------
+    replyWebCmdGetDriverInfo(index) {
+        if (index == 255) //query all
+         {
+            console.log(255);
+            this.replyWebseverOk(replyType.okBrightness);
+        }
+        else if (index >= 0) //query a light
+         {
+            let webPkg = {};
+            let driver = {
+                brightness: 50,
+                lightType: 1,
+                ck: 5000,
+                brightnessMin: 20,
+                brightnessMax: 100,
+                ckMin: 3000,
+                ckMax: 5500,
+                lightID: 1,
+                Mac: '12:34:56:78:90:AB',
+                manufactureID: 0,
+                version: 1,
+                bleEnable: 0
+            };
+            webPkg.reply = 1;
+            webPkg.msg = driver;
+            let webMsg = JSON.stringify(webPkg);
+            this.webServer.sendMessage(webMsg);
+            /*
+                            if ( this.drivers[].lightID) {
+                                index = j;
+                                console.log("index=" + index);
+                                break;
+                            }
+                        
+              */
+        }
+        else { //no light 
+            this.replyWebseverFail(replyType.failID); //response fail id
+        }
+    }
+    //---------------------------------------------------------------------------------
     exeWebCmdPostReset() {
-        let webPkg = {};
-        webPkg.reply = 1;
-        webPkg.msg = "ok";
-        this.webServer.sendMessage(JSON.stringify(webPkg));
+        let cmd;
+        this.modbusServer.sendMessage(cmd);
+        this.replyWebseverOk(replyType.okReset);
     }
     //-----------------------------------------------------------------------------------
-    exeWebCmdPostBrightness(brightness, driverID) {
-        let webPkg = {};
-        webPkg.reply = 1;
-        webPkg.msg = "ok";
-        this.webServer.sendMessage(JSON.stringify(webPkg));
+    exeWebCmdPostBrightness(index, cmd) {
+        if (index >= 0) {
+            if (cmd.cmdData.brightness == 0) {
+                this.modbusServer.sendMessage(cmd); //sent to modbus
+                this.replyWebseverOk(replyType.okBrightness);
+            }
+            else if ((cmd.cmdData.brightness >= this.drivers[index].brightnessMin) && (cmd.cmdData.brightness <= this.drivers[index].brightnessMax)) {
+                this.modbusServer.sendMessage(cmd); //sent to modbus
+                this.replyWebseverOk(replyType.okBrightness);
+            }
+            else {
+                this.replyWebseverFail(replyType.failBrightness);
+            }
+        }
+        else {
+            this.replyWebseverFail(replyType.failID);
+        }
     }
     //-----------------------------------------------------------------------------------
-    exeWebCmdPostDimTemperature(brightness, driverID, CT) {
-        let webPkg = {};
-        webPkg.reply = 1;
-        webPkg.msg = "ok";
-        this.webServer.sendMessage(JSON.stringify(webPkg));
+    exeWebCmdPostDimTemperature(index, cmd) {
+        console.dir(cmd.cmdData.brightness);
+        console.dir(cmd.cmdData.driverId);
+        console.dir(cmd.cmdData.CT);
+        let brightness = cmd.cmdData.brightness;
+        let driverID = cmd.cmdData.driverId;
+        let CT = cmd.cmdData.CT;
+        if (index >= 0) {
+            if (brightness == 0) {
+                if ((CT >= this.drivers[index].ckMin) && (CT <= this.drivers[index].ckMax)) {
+                    this.modbusServer.sendMessage(cmd); //sent to modbus
+                    this.replyWebseverOk(replyType.okCT);
+                }
+                else {
+                    this.replyWebseverFail(replyType.failCT);
+                }
+            }
+            else if ((brightness >= this.drivers[index].brightnessMin) && (brightness <= this.drivers[index].brightnessMax)) {
+                if ((CT >= this.drivers[index].ckMin) && (CT <= this.drivers[index].ckMax)) {
+                    this.modbusServer.sendMessage(cmd); //sent to modbus
+                    this.replyWebseverOk(replyType.okCT);
+                }
+                else {
+                    this.replyWebseverFail(replyType.failCT);
+                }
+            }
+            else {
+                this.replyWebseverFail(replyType.failCT);
+            }
+        }
+        else {
+            this.replyWebseverFail(replyType.failID);
+        }
+    }
+    //----------------------------------------------------------------------------------
+    exeWebCmdPostDimTemperatureAll(cmd) {
+        let flag = true;
+        for (let index = 0; index < this.drivers.length; index++) {
+            if (cmd.cmdData.brightness == 0) {
+                if ((cmd.cmdData.CT < this.drivers[index].ckMin) && (cmd.cmdData.CT > this.drivers[index].ckMax)) {
+                    flag = false;
+                    break;
+                }
+            }
+            else if ((cmd.cmdData.brightness > this.drivers[index].brightnessMin) && (cmd.cmdData.brightness > this.drivers[index].brightnessMax)) {
+                flag = false;
+                break;
+            }
+            else if ((cmd.cmdData.CT < this.drivers[index].ckMin) && (cmd.cmdData.CT > this.drivers[index].ckMax)) {
+                flag = false;
+                break;
+            }
+        }
+        if (flag == true) {
+            this.modbusServer.sendMessage(cmd); //sent to modbus
+            this.replyWebseverOk(replyType.okCT);
+        }
+        else {
+            this.replyWebseverFail(replyType.failCT);
+        }
     }
     //-----------------------------------------------------------------------------
-    exeWebCmdPostDimColoXY(brightness, driverID, colorX, colorY) {
-        let webPkg = {};
-        webPkg.reply = 1;
-        webPkg.msg = "ok";
-        this.webServer.sendMessage(JSON.stringify(webPkg));
+    exeWebCmdPostDimColoXY(index, cmd) {
+        if (index >= 0) {
+            this.modbusServer.sendMessage(cmd); //sent to modbus
+            this.replyWebseverFail(replyType.okXY);
+        }
+        else {
+            this.replyWebseverFail(replyType.failID);
+        }
     }
     //---------------------------------------------------------------------------------------
     //delay msec function
@@ -409,7 +642,7 @@ class ControlProcess {
         let devPkg = [];
         let deviceInfo1 = {};
         deviceInfo1.type = dataTypeModbus_1.typesDevice.tag;
-        deviceInfo1.mac = "123456789ABC";
+        deviceInfo1.mac = "cc:78:ab:6b:fb:07";
         deviceInfo1.seq = 1;
         deviceInfo1.lId1 = 1;
         deviceInfo1.lId2 = 2;
@@ -453,7 +686,7 @@ class ControlProcess {
         devPkg.push(tag);
         let deviceInfo2 = {};
         deviceInfo2.type = dataTypeModbus_1.typesDevice.dripStand;
-        deviceInfo2.mac = "1122334455AB";
+        deviceInfo2.mac = "cc:78:ab:6b:fb:08";
         deviceInfo2.seq = 1;
         deviceInfo2.lId1 = 1;
         deviceInfo2.lId2 = 2;
@@ -468,7 +701,7 @@ class ControlProcess {
         deviceInfo2.Gz = -1;
         deviceInfo2.batPow = 90;
         deviceInfo2.recLightID = 1;
-        deviceInfo2.other = { weight: 900, speed: 20 };
+        deviceInfo2.other = { weight: 900, speed: 20, time: 25 };
         let dripstand = {};
         dripstand.type = deviceInfo2.type;
         dripstand.mac = deviceInfo2.mac;

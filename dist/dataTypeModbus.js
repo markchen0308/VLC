@@ -8,7 +8,12 @@ var holdingRegisterAddress;
     holdingRegisterAddress[holdingRegisterAddress["brightnessMax"] = 3] = "brightnessMax";
     holdingRegisterAddress[holdingRegisterAddress["ckMin"] = 4] = "ckMin";
     holdingRegisterAddress[holdingRegisterAddress["ckMax"] = 5] = "ckMax";
+    holdingRegisterAddress[holdingRegisterAddress["fBleRxEn"] = 6] = "fBleRxEn";
 })(holdingRegisterAddress = exports.holdingRegisterAddress || (exports.holdingRegisterAddress = {}));
+var holdingRegistersAddress;
+(function (holdingRegistersAddress) {
+    holdingRegistersAddress[holdingRegistersAddress["ck"] = 0] = "ck";
+})(holdingRegistersAddress = exports.holdingRegistersAddress || (exports.holdingRegistersAddress = {}));
 var inputregisterAddress;
 (function (inputregisterAddress) {
     inputregisterAddress[inputregisterAddress["version"] = 0] = "version";
@@ -29,7 +34,7 @@ var typesDevice;
 var deviceLength;
 (function (deviceLength) {
     deviceLength[deviceLength["tagLen"] = 24] = "tagLen";
-    deviceLength[deviceLength["dripStandLen"] = 28] = "dripStandLen"; //bytes
+    deviceLength[deviceLength["dripStandLen"] = 30] = "dripStandLen"; //bytes
 })(deviceLength = exports.deviceLength || (exports.deviceLength = {}));
 var devAddress;
 (function (devAddress) {
@@ -53,6 +58,7 @@ var otherDripStandAddress;
 (function (otherDripStandAddress) {
     otherDripStandAddress[otherDripStandAddress["weight"] = 24] = "weight";
     otherDripStandAddress[otherDripStandAddress["speed"] = 26] = "speed";
+    otherDripStandAddress[otherDripStandAddress["time"] = 27] = "time";
 })(otherDripStandAddress = exports.otherDripStandAddress || (exports.otherDripStandAddress = {}));
 var modbusCmd;
 (function (modbusCmd) {
@@ -66,10 +72,11 @@ var webCmd;
     webCmd[webCmd["getToday"] = 3] = "getToday";
     webCmd[webCmd["getYesterday"] = 4] = "getYesterday";
     webCmd[webCmd["getDate"] = 5] = "getDate";
-    webCmd[webCmd["postReset"] = 6] = "postReset";
-    webCmd[webCmd["postDimingBrightness"] = 7] = "postDimingBrightness";
-    webCmd[webCmd["postDimingCT"] = 8] = "postDimingCT";
-    webCmd[webCmd["postDimingXY"] = 9] = "postDimingXY";
+    webCmd[webCmd["getDriver"] = 6] = "getDriver";
+    webCmd[webCmd["postReset"] = 7] = "postReset";
+    webCmd[webCmd["postDimingBrightness"] = 8] = "postDimingBrightness";
+    webCmd[webCmd["postDimingCT"] = 9] = "postDimingCT";
+    webCmd[webCmd["postDimingXY"] = 10] = "postDimingXY";
     webCmd[webCmd["msgError"] = 404] = "msgError";
 })(webCmd = exports.webCmd || (exports.webCmd = {}));
 //# sourceMappingURL=dataTypeModbus.js.map

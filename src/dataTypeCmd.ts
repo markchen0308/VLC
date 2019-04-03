@@ -5,7 +5,7 @@ export interface iSeqId { seqid?: number }
 
 export interface iDate { year?: number, month?: number, date?: number }
 
-export interface iBrightness { brightness?: number, driverID?: number}
+export interface iBrightness { brightness?: number, driverId?: number}
 
 export interface iColorTemperature { brightness?: number, driverID?: number,CT?:number}
 

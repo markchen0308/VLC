@@ -7,10 +7,10 @@ let ModbusSer = require('modbus-serial');
 
 export class ModbusRTU {
     exec = util.promisify(CP.exec);
-    public timeout: number = 100;
+    public timeout: number = 20;
     public rs485DeviceName: string = 'ttyUSB0';
     public devicePath: string = '/dev/' + this.rs485DeviceName;
-    public baudrate: number = 3000000;//baudrate =3m;
+    public baudrate: number =3000000;//baudrate =3m;
     public modbus_Master = new ModbusSer();
 
     public regStartAddress: number;
@@ -25,14 +25,16 @@ export class ModbusRTU {
     }
 
     async process(): Promise<boolean> {
-        await this.delay(1000);
+       
         let rx = await this.checkRS485Device();
         if (rx) {
+            this.delay(5000);
             //set Baudrate
             this.modbus_Master.connectRTU(this.devicePath, { baudRate: this.baudrate })
             //set limitation of response time
             this.modbus_Master.setTimeout(this.timeout);
             console.log(this.rs485DeviceName + ' is exist!');
+           
         }
         else {
             console.log(this.rs485DeviceName + ' is not exist!');
@@ -118,7 +120,7 @@ export class ModbusRTU {
         return new Promise<number[]>((resolve, reject) => {
             this.modbus_Master.readHoldingRegisters(startAddress, regNum)
                 .then((d) => {
-                    console.log("received HoldingRegister", d.data);
+               //     console.log("received HoldingRegister", d.data);
                     resolve(d.data);
                 })
                 .catch((e) => {
@@ -134,7 +136,7 @@ export class ModbusRTU {
         return new Promise<number[]>((resolve, reject) => {
             this.modbus_Master.readInputRegisters(startAddress, regNum)
                 .then((d) => {
-                    console.log("received InputRegister", d.data);
+                   // console.log("received InputRegister", d.data);
                     resolve(d.data);
                 })
                 .catch((e) => {
@@ -148,7 +150,7 @@ export class ModbusRTU {
         return new Promise<number[]>((resolve, reject) => {
             this.modbus_Master.writeRegister(startAddress, regValue)
                 .then((d) => {
-                    console.log("Write Holding Register", d)
+                //    console.log("Write Holding Register", d)
                     resolve(d);
                 })
                 .catch((e) => {
@@ -168,7 +170,6 @@ export class ModbusRTU {
                     resolve(d);
                 })
                 .catch((e) => {
-                    console.log(e.message);
                     reject(e.message);
                 })
         });

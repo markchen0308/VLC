@@ -9,7 +9,7 @@ class ModbusRTU {
     constructor() {
         // this.testProcess();
         this.exec = util.promisify(CP.exec);
-        this.timeout = 100;
+        this.timeout = 20;
         this.rs485DeviceName = 'ttyUSB0';
         this.devicePath = '/dev/' + this.rs485DeviceName;
         this.baudrate = 3000000; //baudrate =3m;
@@ -18,9 +18,9 @@ class ModbusRTU {
         // this.process();
     }
     async process() {
-        await this.delay(1000);
         let rx = await this.checkRS485Device();
         if (rx) {
+            this.delay(5000);
             //set Baudrate
             this.modbus_Master.connectRTU(this.devicePath, { baudRate: this.baudrate });
             //set limitation of response time
@@ -43,7 +43,6 @@ class ModbusRTU {
     //----------------------------------------------------------------
     async checkRS485Device() {
         let rx = await this.exec('ls /dev/ | grep ' + this.rs485DeviceName);
-        console.log(rx.stdout);
         if (rx.stdout.includes(this.rs485DeviceName)) {
             this.isDeviceOk = true;
             rx = await this.exec('chmod +x ' + this.devicePath); //set  executable
@@ -60,17 +59,19 @@ class ModbusRTU {
             }
         });
     }
+    //----------------------------------------------------------------
     delay(msec) {
         return new Promise((resolve) => {
             setTimeout(() => { resolve(true); }, msec);
         });
     }
+    //----------------------------------------------------------------
     async testProcess() {
         //this.writeReadHoldingRegister();
         //this.writeReadHoldingRegisters();
         //this.readInputRegister();
         await this.delay(1000);
-        this.setSlave(7);
+        this.setSlaveID(7);
         await this.readHoldingRegisters(0, 6)
             .then((d) => {
             console.log(d);
@@ -79,9 +80,11 @@ class ModbusRTU {
             console.log(errorMsg);
         });
     }
-    setSlave(id) {
+    //----------------------------------------------------------------
+    setSlaveID(id) {
         this.modbus_Master.setID(id);
     }
+    //----------------------------------------------------------------
     //FC1
     readCoilStatus(startAddress, readStatusNumber) {
         return new Promise((resolve, reject) => {
@@ -96,12 +99,13 @@ class ModbusRTU {
             });
         });
     }
+    //----------------------------------------------------------------
     //FC3
     readHoldingRegisters(startAddress, regNum) {
         return new Promise((resolve, reject) => {
             this.modbus_Master.readHoldingRegisters(startAddress, regNum)
                 .then((d) => {
-                console.log("received HoldingRegister", d.data);
+                //     console.log("received HoldingRegister", d.data);
                 resolve(d.data);
             })
                 .catch((e) => {
@@ -110,12 +114,13 @@ class ModbusRTU {
             });
         });
     }
+    //----------------------------------------------------------------
     //FC4
     readInputRegisters(startAddress, regNum) {
         return new Promise((resolve, reject) => {
             this.modbus_Master.readInputRegisters(startAddress, regNum)
                 .then((d) => {
-                console.log("received InputRegister", d.data);
+                // console.log("received InputRegister", d.data);
                 resolve(d.data);
             })
                 .catch((e) => {
@@ -123,12 +128,13 @@ class ModbusRTU {
             });
         });
     }
+    //----------------------------------------------------------------
     //FC6
     writeSingleRegister(startAddress, regValue) {
         return new Promise((resolve, reject) => {
             this.modbus_Master.writeRegister(startAddress, regValue)
                 .then((d) => {
-                console.log("Write Holding Register", d);
+                //    console.log("Write Holding Register", d)
                 resolve(d);
             })
                 .catch((e) => {
@@ -137,6 +143,7 @@ class ModbusRTU {
             });
         });
     }
+    //----------------------------------------------------------------
     //FC16 
     writeRegisters(startAddress, regValues) {
         return new Promise((resolve, reject) => {
@@ -146,11 +153,11 @@ class ModbusRTU {
                 resolve(d);
             })
                 .catch((e) => {
-                console.log(e.message);
                 reject(e.message);
             });
         });
     }
+    //----------------------------------------------------------------
     writeReadHoldingRegister() {
         //FC6
         this.regStartAddress = 0x01;
@@ -164,6 +171,7 @@ class ModbusRTU {
             this.readHoldingRegisters(this.regStartAddress, this.registerNum);
         }, 2000);
     }
+    //----------------------------------------------------------------
     writeReadHoldingRegisters() {
         //FC16
         this.regStartAddress = 0x00;
@@ -177,6 +185,7 @@ class ModbusRTU {
             this.readHoldingRegisters(this.regStartAddress, this.registerNum);
         }, 2000);
     }
+    //----------------------------------------------------------------
     readInputRegister() {
         //FC4 
         this.regStartAddress = 0x01;
@@ -187,4 +196,5 @@ class ModbusRTU {
     }
 }
 exports.ModbusRTU = ModbusRTU;
+//----------------------------------------------------------------
 //# sourceMappingURL=modbusDriver.js.map

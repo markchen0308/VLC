@@ -1,5 +1,5 @@
 {
-    "webserverIp":"192.168.0.110",
+    "webserverIp":"127.0.0.1",
     "webserverPort": 80,
    
     "dbUser": "postgres", 

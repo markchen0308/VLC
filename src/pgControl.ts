@@ -189,7 +189,7 @@ export class PgControl {
                     resolve(value);
                 })
                 .catch((reason) => {
-                    resolve(reason);
+                    reject(reason);
                 })
         });
     }

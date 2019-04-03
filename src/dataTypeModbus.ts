@@ -13,7 +13,6 @@ export interface iDriver {
     manufactureID?: number;
     version?: number;
     bleEnable?:number;
-    
 }
 
 
@@ -45,8 +44,8 @@ export interface iRxLightInfo
 
 export interface iDevPkg {
     type?: number;
+    seq?:number;
     mac?: string;
-    seq?: number;
     lId1?: number;
     br1?: number;
     lId2?: number;
@@ -66,6 +65,7 @@ export interface iDevPkg {
 export interface iDripstand {
     weight?: number;
     speed?: number;
+    time?:number;
 }
 
 
@@ -109,6 +109,10 @@ export enum holdingRegisterAddress {
     fBleRxEn
 }
 
+export enum holdingRegistersAddress {
+    ck,
+}
+
 export enum inputregisterAddress {
     version = 0,
     lightID,
@@ -129,7 +133,7 @@ export enum typesDevice {
 
 export enum deviceLength {
     tagLen = 24,  //bytes
-    dripStandLen = 28  //bytes
+    dripStandLen = 30  //bytes
 }
 
 export enum devAddress {
@@ -152,7 +156,8 @@ export enum devAddress {
 
 export enum otherDripStandAddress {
     weight = 24,
-    speed = 26
+    speed = 26,
+    time=27
 }
 
 
@@ -167,10 +172,13 @@ export enum webCmd {
     getToday,
     getYesterday,
     getDate,
+    getDriver,
     postReset,
     postDimingBrightness,
     postDimingCT,
     postDimingXY,
     msgError=404
   }
+
+  
   
