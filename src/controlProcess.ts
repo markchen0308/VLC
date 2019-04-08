@@ -18,6 +18,7 @@ enum replyType {
     failBrightness,
     failCT,
     failXY,
+    failNoDriver,
     okBrightness,
     okCT,
     okXY,
@@ -62,7 +63,7 @@ export class ControlProcess {
         this.listenModbusServer();//start listen modbus server
         this.savingProcess();//save history data
 
-        this.webtest();//test webserver
+        //this.webtest();//test webserver
     }
     //-----------------------------------------------------------------------------------------------------------
     listenWebserver() {
@@ -117,9 +118,10 @@ export class ControlProcess {
     parseModbusCmd(cmd: DTCMD.iCmd) {
 
         switch (cmd.cmdtype) {
-            case modbusCmd.driverInfo://driverInfo[]
+            case modbusCmd.driverInfo://update driverInfo[]
                 this.drivers.length = 0;//clear driver
                 this.drivers = cmd.cmdData;//get driverInfo[] and save it
+                console.log('account of driver='+this.drivers.length)
                 console.dir(this.drivers);
                 break;
 
@@ -185,9 +187,7 @@ export class ControlProcess {
 
             case replyType.okCT:
                 webPkg.msg = "dimming color temperature ok";
-
                 break;
-
 
             case replyType.okReset:
                 webPkg.msg = "reset ok";
@@ -221,6 +221,10 @@ export class ControlProcess {
 
             case replyType.failXY:
                 webPkg.msg = "Dimming XY fail";
+                break;
+
+            case replyType.failNoDriver:
+                webPkg.msg = "There is no driver in the network.";
                 break;
         }
 
@@ -276,7 +280,7 @@ export class ControlProcess {
                 break;
 
             case webCmd.getDriver:
-                this.replyWebCmdGetDriverInfo(index)
+                this.replyWebCmdGetDriverInfo(index, cmd);
                 break;
 
             case webCmd.postReset:
@@ -572,47 +576,71 @@ export class ControlProcess {
     }
 
     //---------------------------------------------------------------------------------
-    replyWebCmdGetDriverInfo(index: number) {
-        if (index == 255)//query all
-        {
-            console.log(255)
+    replyWebCmdGetDriverInfo(index: number, cmd: DTCMD.iCmd) {
+        if (this.drivers.length > 0) {
+            if (index == 255)//query all
+            {
+                let webPkg: iWebPkg = {};
+                /*
+                console.log(255)
+                this.modbusServer.sendMessage(cmd);//sent to modbus
+               
+                let driver:iDriver={
+                    brightness:50,
+                    lightType:1,
+                    ck:5000,
+                    brightnessMin:20,
+                    brightnessMax:100,
+                    ckMin:3000,
+                    ckMax:5500,
+                    lightID:1,
+                    Mac:'12:34:56:78:90:AB',
+                    manufactureID:0,
+                    version:1,
+                    bleEnable:0
+                } */
+                let drivers = this.drivers;
+                webPkg.reply = 1;
+                webPkg.msg = drivers;
+                let webMsg: string = JSON.stringify(webPkg);
+                this.webServer.sendMessage(webMsg);
+            }
+            else if (index >= 0)//query a light
+            {
+                let driver = this.drivers[index];
 
-            this.replyWebseverOk(replyType.okBrightness);
-        }
-        else if (index >= 0)//query a light
-        {
-            let webPkg: iWebPkg = {};
-            let driver:iDriver={
-                brightness:50,
-                lightType:1,
-                ck:5000,
-                brightnessMin:20,
-                brightnessMax:100,
-                ckMin:3000,
-                ckMax:5500,
-                lightID:1,
-                Mac:'12:34:56:78:90:AB',
-                manufactureID:0,
-                version:1,
-                bleEnable:0
-            } 
+                let webPkg: iWebPkg = {};
+                /*
+                //test data
+                let driver:iDriver={
+                    brightness:50,
+                    lightType:1,
+                    ck:5000,
+                    brightnessMin:20,
+                    brightnessMax:100,
+                    ckMin:3000,
+                    ckMax:5500,
+                    lightID:1,
+                    Mac:'12:34:56:78:90:AB',
+                    manufactureID:0,
+                    version:1,
+                    bleEnable:0
+                } 
+                 */
+                webPkg.reply = 1;
+                webPkg.msg = driver;
+                let webMsg: string = JSON.stringify(webPkg);//encrypt
+                this.webServer.sendMessage(webMsg);
 
-            webPkg.reply = 1;
-            webPkg.msg = driver;
-            let webMsg: string = JSON.stringify(webPkg);
-            this.webServer.sendMessage(webMsg);
-/*
-                if ( this.drivers[].lightID) {
-                    index = j;
-                    console.log("index=" + index);
-                    break;
-                }
-            
-  */        
+            }
+            else {//can not find light ID 
+                this.replyWebseverFail(replyType.failID);//response fail id
+            }
         }
-        else {//no light 
-            this.replyWebseverFail(replyType.failID);//response fail id
+        else {//there is no driver in the netwrok
+            this.replyWebseverFail(replyType.failNoDriver);//response no driver
         }
+
     }
     //---------------------------------------------------------------------------------
     exeWebCmdPostReset() {

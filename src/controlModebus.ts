@@ -181,46 +181,36 @@ export class ControlModbus {
             console.log("enable BLE")
             await this.enBleReceive();
             await this.delay(1050);
-            this.runCmdProcess();
+            this.runCmdProcess();//start polling driver and get location data
         }
-        //    if (this.drivers.length > 0) {
-        //        await this.disableBleReceive();
-        //        await this.enBleReceive();
-        //    }
-        /*
-                if (this.drivers.length > 0) {
-                    await this.enBleReceive();
-                    await this.delay(1100);
-                }
-        
-        
-                if (this.drivers.length > 0) {
-                    //polling time 
-                    this.pollingPositionTimer = setInterval(() => {
-        
-                        if (this.cmdControlQueue.length > 0) {
-                            this.exeControlCmd();//execute cmd in queue
-                        }
-                        else if (this.fPollingEn == true)//allow polling
-                        {
-                            this.devPkgMember.length = 0;//clear devPkgMember
-                            this.devPkgMember = [];
-                            this.pollingLocationInfo();//ask input register location data
-        
-                        }
-                    }, 1000)//persecond
-                }
-        */
-
-
     }
 
     //------------------------------------------------------------------------------------
     async runCmdProcess() {
 
         //this.timeRunCmd=10;
+        //check if there is  command in command queue
         if (this.cmdControlQueue.length > 0) {
             await this.exeControlCmd();//execute cmd in queue
+           
+            //update driver infomation
+            await this.updateExistNetworkLight()
+            .then((value) => {
+                if (value.length > 0) {
+                    this.drivers = value;
+                    let cmd: DTCMD.iCmd =
+                    {
+                        cmdtype: modbusCmd.driverInfo,
+                        cmdData: this.drivers
+                    }
+                    //send driver status to controprocess
+                    this.sendModbusMessage2Server(cmd);//sent driver information to server
+                }
+                else {
+                    this.drivers.length = 0;
+                    console.log("no device");
+                }
+            });
         }
 
         //if (this.fPollingEn == true)//allow polling
@@ -276,7 +266,7 @@ export class ControlModbus {
             this.masterRs485.setSlaveID(lightID);
             this.masterRs485.writeSingleRegister(holdingRegisterAddress.fBleRxEn, 1)
                 .then((value) => {
-                    resolve(value);//return data length
+                    resolve(value);//return 
                 })
                 .catch((errorMsg) => {
                     reject(errorMsg);
@@ -290,7 +280,7 @@ export class ControlModbus {
             this.masterRs485.setSlaveID(lightID);
             this.masterRs485.writeSingleRegister(holdingRegisterAddress.fBleRxEn, 0)
                 .then((value) => {
-                    resolve(value);//return data length
+                    resolve(value);//return 
                 })
                 .catch((errorMsg) => {
                     reject(errorMsg);
@@ -391,7 +381,7 @@ export class ControlModbus {
             cmd = this.cmdControlQueue[i];
             cmdLightID = cmd.cmdData.driverId;
             //console.dir(cmd.cmdData.driverId);
-            if (cmdLightID == 255) {
+            if (cmdLightID == 255) {//group control
 
                 switch (cmd.cmdtype) {
 
@@ -646,6 +636,35 @@ export class ControlModbus {
         let id = 0;
         for (let i: number = 0; i < maxLightIdKeep; i++) {
             id += 1;
+            console.log('*Start query Light : ' + id.toString());
+            await this.getLightInformation(id)
+                .then((value) => {//value is driverInfo
+                    // console.log('Resopnse:');
+                   // console.log(value);
+                    driversKeep.push(value);//save driver
+                })
+                .catch((errorMsg) => {
+                    console.log('Resopnse error:' + errorMsg);
+                });
+            await this.delay(pollingTimeStep);//read next light after 5msec
+        }
+
+        return new Promise<iDriver[]>((resolve, reject) => {
+            resolve(driversKeep);
+        });
+    }
+       //-------------------------------------------------------------------
+    //update exist light driver on the network
+    async updateExistNetworkLight(): Promise<iDriver[]> {
+        let driversKeep: iDriver[] = [];
+        let id :number= 0;
+        let driverIDs:number[]=[];
+        //backup driver ID
+        this.drivers.forEach(driver => {
+            driverIDs.push(driver.lightID);
+        });
+        for (let i: number = 0; i < driverIDs.length; i++) {
+            id = driverIDs[i];
             console.log('*Start query Light : ' + id.toString());
             await this.getLightInformation(id)
                 .then((value) => {//value is driverInfo
