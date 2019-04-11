@@ -145,6 +145,7 @@ class ControlModbus {
         //check if there is  command in command queue
         if (this.cmdControlQueue.length > 0) {
             await this.exeControlCmd(); //execute cmd in queue
+            await this.delay(10);
             //update driver infomation
             await this.updateExistNetworkLight()
                 .then((value) => {
