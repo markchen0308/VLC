@@ -17,10 +17,12 @@ enum replyType {
     failID,
     failBrightness,
     failCT,
+    failSwitchOnOFF,
     failXY,
     failNoDriver,
     okBrightness,
     okCT,
+    okSwitchOnOFF,
     okXY,
     okReset,
     okQueryLocation,
@@ -121,7 +123,7 @@ export class ControlProcess {
             case modbusCmd.driverInfo://update driverInfo[]
                 this.drivers.length = 0;//clear driver
                 this.drivers = cmd.cmdData;//get driverInfo[] and save it
-                console.log('account of driver='+this.drivers.length)
+                console.log('account of driver=' + this.drivers.length)
                 console.dir(this.drivers);
                 break;
 
@@ -189,6 +191,10 @@ export class ControlProcess {
                 webPkg.msg = "dimming color temperature ok";
                 break;
 
+            case replyType.okSwitchOnOFF:
+                webPkg.msg = "switch on/off ok";
+                break;
+
             case replyType.okReset:
                 webPkg.msg = "reset ok";
                 break;
@@ -219,6 +225,10 @@ export class ControlProcess {
                 webPkg.msg = "Dimming color temperature is wrong";
                 break;
 
+            case replyType.failSwitchOnOFF:
+                webPkg.msg = "switching on/off is wrong";
+                break;
+
             case replyType.failXY:
                 webPkg.msg = "Dimming XY fail";
                 break;
@@ -238,7 +248,7 @@ export class ControlProcess {
         let cmdLightID: number = 0;
         let index: number = -1;
         //check control cmd's driver if exist
-        if ((cmd.cmdtype == webCmd.postDimingBrightness) || (cmd.cmdtype == webCmd.postDimingCT) || (cmd.cmdtype == webCmd.postDimingXY) || cmd.cmdtype == webCmd.getDriver) {
+        if ((cmd.cmdtype == webCmd.postDimingBrightness) || (cmd.cmdtype == webCmd.postDimingCT) || (cmd.cmdtype == webCmd.postDimingXY) || (cmd.cmdtype == webCmd.postSwitchOnOff) || cmd.cmdtype == webCmd.getDriver) {
 
             if (cmd.cmdData.driverId == 255) // all driver
             {
@@ -306,6 +316,17 @@ export class ControlProcess {
             case webCmd.postDimingXY:
                 this.exeWebCmdPostDimColoXY(index, cmd);
 
+                break;
+
+            case webCmd.postSwitchOnOff:
+                if (index == 255) {
+                    console.log('switchOnOff All')
+                    this.exeWebCmdPostSwitchOnOffAll(cmd);
+                }
+                else {
+                    console.log('switchOnOff')
+                    this.exeWebCmdPostSwitchOnOff(index, cmd);
+                }
                 break;
         }
     }
@@ -712,6 +733,25 @@ export class ControlProcess {
         }
     }
     //----------------------------------------------------------------------------------
+    exeWebCmdPostSwitchOnOffAll(cmd: DTCMD.iCmd) {
+        this.modbusServer.sendMessage(cmd);//sent to modbus
+        this.replyWebseverOk(replyType.okSwitchOnOFF);
+    }
+    //----------------------------------------------------------------------------------------------------------
+    exeWebCmdPostSwitchOnOff(index: number, cmd: DTCMD.iCmd) {
+
+        let switchOnOff: number = cmd.cmdData.switchOnOff;
+        let driverID: number = cmd.cmdData.driverId;
+
+        if (index >= 0) {
+            this.modbusServer.sendMessage(cmd);//sent to modbus
+            this.replyWebseverOk(replyType.okSwitchOnOFF);
+        }
+        else {
+            this.replyWebseverFail(replyType.failSwitchOnOFF);
+        }
+    }
+    //----------------------------------------------------------------------------------
     exeWebCmdPostDimTemperatureAll(cmd: DTCMD.iCmd) {
 
         let flag: boolean = true;
@@ -740,8 +780,6 @@ export class ControlProcess {
         else {
             this.replyWebseverFail(replyType.failCT);
         }
-
-
     }
     //-----------------------------------------------------------------------------
     exeWebCmdPostDimColoXY(index: number, cmd: DTCMD.iCmd) {

@@ -8,7 +8,7 @@ let configfilePath = './config.json';
 
 import { ModbusRTU } from './modbusDriver';
 import { iDriver, iDevInfo, iReadableRegister, iDripstand, iDevPkg, iRxLightInfo } from './dataTypeModbus';
-import { holdingRegisterAddress, holdingRegistersAddress, inputregisterAddress, typesDevice, deviceLength, devAddress, otherDripStandAddress, modbusCmd, webCmd } from './dataTypeModbus';
+import { holdingRegisterAddress, holdingRegistersAddress, inputregisterAddress, typesDevice, deviceLength, devAddress, otherDripStandAddress, modbusCmd, webCmd, driverlightType } from './dataTypeModbus';
 
 import * as DTMODBUS from './dataTypeModbus';
 
@@ -36,7 +36,7 @@ export class ControlModbus {
     masterRs485: ModbusRTU = new ModbusRTU();
     drivers: iDriver[] = [];
     devPkgMember: iDevPkg[] = [];
-    pollingTime: number=1000;
+    pollingTime: number = 1000;
 
     flagServerStatus: boolean = false;
     flagModbusStatus: boolean = false;
@@ -50,7 +50,7 @@ export class ControlModbus {
     constructor() {
         this.process();
     }
-
+    //-------------------------------------------------------------------------------
     async process() {
         this.startModbusClient();//create modbus client and connect to modbus server
 
@@ -113,7 +113,8 @@ export class ControlModbus {
     }
 
     //-------------------------------------------------------------
-    sendModbusMessage2Server(cmd: DTCMD.iCmd) {
+    sendModbusMessage2Server(cmd: DTCMD.iCmd)//sent cmd data to server
+    {
         this.modbusClient.write(JSON.stringify(cmd));
     }
     //------------------------------------------------------------
@@ -146,6 +147,10 @@ export class ControlModbus {
 
             case webCmd.postDimingXY:
                 this.cmdControlQueue.push(cmd);//push to queue and wait for execution 
+                break;
+
+            case webCmd.postSwitchOnOff:
+                this.cmdControlQueue.push(cmdtemp);//push to queue and wait for execution 
                 break;
         }
     }
@@ -195,22 +200,22 @@ export class ControlModbus {
             await this.delay(10);
             //update driver infomation
             await this.updateExistNetworkLight()
-            .then((value) => {
-                if (value.length > 0) {
-                    this.drivers = value;
-                    let cmd: DTCMD.iCmd =
-                    {
-                        cmdtype: modbusCmd.driverInfo,
-                        cmdData: this.drivers
+                .then((value) => {
+                    if (value.length > 0) {
+                        this.drivers = value;
+                        let cmd: DTCMD.iCmd =
+                        {
+                            cmdtype: modbusCmd.driverInfo,
+                            cmdData: this.drivers
+                        }
+                        //send driver status to controprocess
+                        this.sendModbusMessage2Server(cmd);//sent driver information to server
                     }
-                    //send driver status to controprocess
-                    this.sendModbusMessage2Server(cmd);//sent driver information to server
-                }
-                else {
-                    this.drivers.length = 0;
-                    console.log("no device");
-                }
-            });
+                    else {
+                        this.drivers.length = 0;
+                        console.log("no device");
+                    }
+                });
         }
 
         //if (this.fPollingEn == true)//allow polling
@@ -227,7 +232,7 @@ export class ControlModbus {
 
         setTimeout(() => {
             this.runCmdProcess();
-        },1000);// this.pollingTime);
+        }, 1000);// this.pollingTime);
     }
     //------------------------------------------------------------------------------------
     async enBleReceive(): Promise<boolean> {
@@ -355,24 +360,45 @@ export class ControlModbus {
         });
     }
     //------------------------------------------------------------------------------------------
+    async switchOnOffAll(switchValue: number): Promise<boolean> {
+        return new Promise<boolean>((resolve, reject) => {
+            this.masterRs485.setSlaveID(0);
+            this.masterRs485.writeSingleRegister(holdingRegisterAddress.onOff, switchValue)
+                .then((value) => {
+                    resolve(true);//return data length
+                })
+                .catch((errorMsg) => {
+                    reject(errorMsg);
+                })
+        });
+    }
+
+    //------------------------------------------------------------------------------------------
+    async switchOnOff(switchValue: number, driverID: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.masterRs485.setSlaveID(driverID);
+            this.masterRs485.writeSingleRegister(holdingRegisterAddress.onOff, switchValue)
+                .then((value) => {
+                    resolve(value);//return data length
+                })
+                .catch((errMsg) => {
+                    reject(errMsg);
+                })
+        });
+    }
+
+    //------------------------------------------------------------------------------------------
     async exeControlCmd(): Promise<boolean> {
         let cmd: DTCMD.iCmd;
         let len: number = this.cmdControlQueue.length;
         let brightID: number;
         let cmdBrightness: number;
         let cmdLightID: number = 0;
-        // cmd = this.cmdControlQueue[0];
-        // cmdLightID = cmd.cmdData.driverId;
-        // cmdBrightness = cmd.cmdData.brightness;
-        //  console.log("id=" + cmdLightID);
-        // console.log("brightness=" + cmdBrightness);
+        let cmdSwitchOnOffValue: number = 0;
+        let ck: number;
+        let brightness: number;
         let driver: iDriver;
-
-        console.log("execmd");
-
-
-
-
+        let lightType: driverlightType;
 
         for (let i: number = 0; i < len; i++) {
 
@@ -397,7 +423,6 @@ export class ControlModbus {
                         break;
 
                     case webCmd.postDimingCT:
-
                         console.log("dim ct all");
                         await this.setCT_All(cmd.cmdData.CT, cmd.cmdData.brightness)
                             .then((value) => {
@@ -412,19 +437,34 @@ export class ControlModbus {
                         //let cmdDimingXY: DTCMD.iColorXY = cmd.cmdData;
                         //this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
                         break;
+
+                    case webCmd.postSwitchOnOff:
+
+                        if (cmd.cmdData.switchOnOff) {
+                            console.log("switch on all");
+                        } else {
+                            console.log("switch off all");
+                        }
+
+                        await this.switchOnOffAll(cmd.cmdData.switchOnOff)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+                        break;
                 }
-
-
             }
             else {
-
+                //Is id exist
                 for (let j: number = 0; j < this.drivers.length; j++) {
                     if (cmd.cmdData.driverId == this.drivers[j].lightID) {
                         cmdLightID = this.drivers[j].lightID;
                         break;
                     }
                 }
-                if (cmdLightID > 0)//check driver id match cmd driver
+
+                if (cmdLightID > 0)// driver id match cmd driver
                 {
                     switch (cmd.cmdtype) {
 
@@ -440,28 +480,32 @@ export class ControlModbus {
                             break;
 
                         case webCmd.postDimingCT:
-
-
-                            console.log("dim ct");
+                            console.log("dim ct "+cmdLightID);
                             await this.setCT(cmdLightID, cmd.cmdData.CT, cmd.cmdData.brightness)
                                 .then((value) => {
                                     console.log(value);
                                 }).catch((reason) => {
                                     console.log(reason);
                                 })
-
-
-                            // 
-
-
-                            //  await this.delay(pollingTimeStep);
-                            //  await this.setCT(cmdDimingCT.driverID,cmdDimingCT.CT);
-                            //this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
                             break;
 
                         case webCmd.postDimingXY:
                             //let cmdDimingXY: DTCMD.iColorXY = cmd.cmdData;
                             //this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
+                            break;
+
+                        case webCmd.postSwitchOnOff:
+                            if (cmd.cmdData.switchOnOff) {
+                                console.log("switch on driver " + cmdLightID);
+                            } else {
+                                console.log("switch off driver " + cmdLightID);
+                            }
+                            await this.switchOnOff(cmd.cmdData.switchOnOff, cmdLightID)
+                                .then((value) => {
+                                    console.log(value);
+                                }).catch((reason) => {
+                                    console.log(reason);
+                                })
                             break;
                     }
                 }
@@ -553,7 +597,7 @@ export class ControlModbus {
 
                     len = value[0];//record data length
                     if (len >= 0) {
-                       // console.log("len="+len)
+                        // console.log("len="+len)
                         resolve(len);//return data length
                     }
                     else {
@@ -640,7 +684,7 @@ export class ControlModbus {
             await this.getLightInformation(id)
                 .then((value) => {//value is driverInfo
                     // console.log('Resopnse:');
-                   // console.log(value);
+                    // console.log(value);
                     driversKeep.push(value);//save driver
                 })
                 .catch((errorMsg) => {
@@ -653,12 +697,12 @@ export class ControlModbus {
             resolve(driversKeep);
         });
     }
-       //-------------------------------------------------------------------
+    //-------------------------------------------------------------------
     //update exist light driver on the network
     async updateExistNetworkLight(): Promise<iDriver[]> {
         let driversKeep: iDriver[] = [];
-        let id :number= 0;
-        let driverIDs:number[]=[];
+        let id: number = 0;
+        let driverIDs: number[] = [];
         //backup driver ID
         this.drivers.forEach(driver => {
             driverIDs.push(driver.lightID);
@@ -669,7 +713,7 @@ export class ControlModbus {
             await this.getLightInformation(id)
                 .then((value) => {//value is driverInfo
                     // console.log('Resopnse:');
-                   // console.log(value);
+                    // console.log(value);
                     driversKeep.push(value);//save driver
                 })
                 .catch((errorMsg) => {
@@ -804,8 +848,8 @@ export class ControlModbus {
             case typesDevice.dripStand:
                 let other: iDripstand = {};
                 other.weight = this.byte2Number(u8[otherDripStandAddress.weight + 1], u8[otherDripStandAddress.weight]);
-                other.speed =u8[otherDripStandAddress.speed];// this.byte2Number(u8[otherDripStandAddress.speed + 1], u8[otherDripStandAddress.speed]);
-                other.time=this.byte2Number(u8[otherDripStandAddress.time + 1], u8[otherDripStandAddress.time]);
+                other.speed = u8[otherDripStandAddress.speed];// this.byte2Number(u8[otherDripStandAddress.speed + 1], u8[otherDripStandAddress.speed]);
+                other.time = this.byte2Number(u8[otherDripStandAddress.time + 1], u8[otherDripStandAddress.time]);
                 dev.other = other;
                 break;
         }

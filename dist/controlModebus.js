@@ -27,6 +27,7 @@ class ControlModbus {
         this.timeRunCmd = 10;
         this.process();
     }
+    //-------------------------------------------------------------------------------
     async process() {
         this.startModbusClient(); //create modbus client and connect to modbus server
         this.flagModbusStatus = await this.masterRs485.process(); //open modbus
@@ -106,6 +107,9 @@ class ControlModbus {
                 break;
             case dataTypeModbus_1.webCmd.postDimingXY:
                 this.cmdControlQueue.push(cmd); //push to queue and wait for execution 
+                break;
+            case dataTypeModbus_1.webCmd.postSwitchOnOff:
+                this.cmdControlQueue.push(cmdtemp); //push to queue and wait for execution 
                 break;
         }
     }
@@ -298,19 +302,43 @@ class ControlModbus {
         });
     }
     //------------------------------------------------------------------------------------------
+    async switchOnOffAll(switchValue) {
+        return new Promise((resolve, reject) => {
+            this.masterRs485.setSlaveID(0);
+            this.masterRs485.writeSingleRegister(dataTypeModbus_1.holdingRegisterAddress.onOff, switchValue)
+                .then((value) => {
+                resolve(true); //return data length
+            })
+                .catch((errorMsg) => {
+                reject(errorMsg);
+            });
+        });
+    }
+    //------------------------------------------------------------------------------------------
+    async switchOnOff(switchValue, driverID) {
+        return new Promise((resolve, reject) => {
+            this.masterRs485.setSlaveID(driverID);
+            this.masterRs485.writeSingleRegister(dataTypeModbus_1.holdingRegisterAddress.onOff, switchValue)
+                .then((value) => {
+                resolve(value); //return data length
+            })
+                .catch((errMsg) => {
+                reject(errMsg);
+            });
+        });
+    }
+    //------------------------------------------------------------------------------------------
     async exeControlCmd() {
         let cmd;
         let len = this.cmdControlQueue.length;
         let brightID;
         let cmdBrightness;
         let cmdLightID = 0;
-        // cmd = this.cmdControlQueue[0];
-        // cmdLightID = cmd.cmdData.driverId;
-        // cmdBrightness = cmd.cmdData.brightness;
-        //  console.log("id=" + cmdLightID);
-        // console.log("brightness=" + cmdBrightness);
+        let cmdSwitchOnOffValue = 0;
+        let ck;
+        let brightness;
         let driver;
-        console.log("execmd");
+        let lightType;
         for (let i = 0; i < len; i++) {
             //check driver id match cmd driver
             cmd = this.cmdControlQueue[i];
@@ -339,16 +367,31 @@ class ControlModbus {
                         //let cmdDimingXY: DTCMD.iColorXY = cmd.cmdData;
                         //this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
                         break;
+                    case dataTypeModbus_1.webCmd.postSwitchOnOff:
+                        if (cmd.cmdData.switchOnOff) {
+                            console.log("switch on all");
+                        }
+                        else {
+                            console.log("switch off all");
+                        }
+                        await this.switchOnOffAll(cmd.cmdData.switchOnOff)
+                            .then((value) => {
+                            console.log(value);
+                        }).catch((reason) => {
+                            console.log(reason);
+                        });
+                        break;
                 }
             }
             else {
+                //Is id exist
                 for (let j = 0; j < this.drivers.length; j++) {
                     if (cmd.cmdData.driverId == this.drivers[j].lightID) {
                         cmdLightID = this.drivers[j].lightID;
                         break;
                     }
                 }
-                if (cmdLightID > 0) //check driver id match cmd driver
+                if (cmdLightID > 0) // driver id match cmd driver
                  {
                     switch (cmd.cmdtype) {
                         case dataTypeModbus_1.webCmd.postDimingBrightness:
@@ -360,21 +403,31 @@ class ControlModbus {
                             });
                             break;
                         case dataTypeModbus_1.webCmd.postDimingCT:
-                            console.log("dim ct");
+                            console.log("dim ct " + cmdLightID);
                             await this.setCT(cmdLightID, cmd.cmdData.CT, cmd.cmdData.brightness)
                                 .then((value) => {
                                 console.log(value);
                             }).catch((reason) => {
                                 console.log(reason);
                             });
-                            // 
-                            //  await this.delay(pollingTimeStep);
-                            //  await this.setCT(cmdDimingCT.driverID,cmdDimingCT.CT);
-                            //this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
                             break;
                         case dataTypeModbus_1.webCmd.postDimingXY:
                             //let cmdDimingXY: DTCMD.iColorXY = cmd.cmdData;
                             //this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
+                            break;
+                        case dataTypeModbus_1.webCmd.postSwitchOnOff:
+                            if (cmd.cmdData.switchOnOff) {
+                                console.log("switch on driver " + cmdLightID);
+                            }
+                            else {
+                                console.log("switch off driver " + cmdLightID);
+                            }
+                            await this.switchOnOff(cmd.cmdData.switchOnOff, cmdLightID)
+                                .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            });
                             break;
                     }
                 }

@@ -12,13 +12,15 @@ var replyType;
     replyType[replyType["failID"] = 0] = "failID";
     replyType[replyType["failBrightness"] = 1] = "failBrightness";
     replyType[replyType["failCT"] = 2] = "failCT";
-    replyType[replyType["failXY"] = 3] = "failXY";
-    replyType[replyType["failNoDriver"] = 4] = "failNoDriver";
-    replyType[replyType["okBrightness"] = 5] = "okBrightness";
-    replyType[replyType["okCT"] = 6] = "okCT";
-    replyType[replyType["okXY"] = 7] = "okXY";
-    replyType[replyType["okReset"] = 8] = "okReset";
-    replyType[replyType["okQueryLocation"] = 9] = "okQueryLocation";
+    replyType[replyType["failSwitchOnOFF"] = 3] = "failSwitchOnOFF";
+    replyType[replyType["failXY"] = 4] = "failXY";
+    replyType[replyType["failNoDriver"] = 5] = "failNoDriver";
+    replyType[replyType["okBrightness"] = 6] = "okBrightness";
+    replyType[replyType["okCT"] = 7] = "okCT";
+    replyType[replyType["okSwitchOnOFF"] = 8] = "okSwitchOnOFF";
+    replyType[replyType["okXY"] = 9] = "okXY";
+    replyType[replyType["okReset"] = 10] = "okReset";
+    replyType[replyType["okQueryLocation"] = 11] = "okQueryLocation";
 })(replyType || (replyType = {}));
 class ControlProcess {
     constructor() {
@@ -151,6 +153,9 @@ class ControlProcess {
             case replyType.okCT:
                 webPkg.msg = "dimming color temperature ok";
                 break;
+            case replyType.okSwitchOnOFF:
+                webPkg.msg = "switch on/off ok";
+                break;
             case replyType.okReset:
                 webPkg.msg = "reset ok";
                 break;
@@ -174,6 +179,9 @@ class ControlProcess {
             case replyType.failCT:
                 webPkg.msg = "Dimming color temperature is wrong";
                 break;
+            case replyType.failSwitchOnOFF:
+                webPkg.msg = "switching on/off is wrong";
+                break;
             case replyType.failXY:
                 webPkg.msg = "Dimming XY fail";
                 break;
@@ -190,7 +198,7 @@ class ControlProcess {
         let cmdLightID = 0;
         let index = -1;
         //check control cmd's driver if exist
-        if ((cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingBrightness) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingCT) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingXY) || cmd.cmdtype == dataTypeModbus_1.webCmd.getDriver) {
+        if ((cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingBrightness) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingCT) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingXY) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postSwitchOnOff) || cmd.cmdtype == dataTypeModbus_1.webCmd.getDriver) {
             if (cmd.cmdData.driverId == 255) // all driver
              {
                 index = 255;
@@ -244,6 +252,16 @@ class ControlProcess {
                 break;
             case dataTypeModbus_1.webCmd.postDimingXY:
                 this.exeWebCmdPostDimColoXY(index, cmd);
+                break;
+            case dataTypeModbus_1.webCmd.postSwitchOnOff:
+                if (index == 255) {
+                    console.log('switchOnOff All');
+                    this.exeWebCmdPostSwitchOnOffAll(cmd);
+                }
+                else {
+                    console.log('switchOnOff');
+                    this.exeWebCmdPostSwitchOnOff(index, cmd);
+                }
                 break;
         }
     }
@@ -619,6 +637,23 @@ class ControlProcess {
         }
         else {
             this.replyWebseverFail(replyType.failID);
+        }
+    }
+    //----------------------------------------------------------------------------------
+    exeWebCmdPostSwitchOnOffAll(cmd) {
+        this.modbusServer.sendMessage(cmd); //sent to modbus
+        this.replyWebseverOk(replyType.okSwitchOnOFF);
+    }
+    //----------------------------------------------------------------------------------------------------------
+    exeWebCmdPostSwitchOnOff(index, cmd) {
+        let switchOnOff = cmd.cmdData.switchOnOff;
+        let driverID = cmd.cmdData.driverId;
+        if (index >= 0) {
+            this.modbusServer.sendMessage(cmd); //sent to modbus
+            this.replyWebseverOk(replyType.okSwitchOnOFF);
+        }
+        else {
+            this.replyWebseverFail(replyType.failSwitchOnOFF);
         }
     }
     //----------------------------------------------------------------------------------

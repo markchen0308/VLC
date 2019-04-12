@@ -9,6 +9,7 @@ var holdingRegisterAddress;
     holdingRegisterAddress[holdingRegisterAddress["ckMin"] = 4] = "ckMin";
     holdingRegisterAddress[holdingRegisterAddress["ckMax"] = 5] = "ckMax";
     holdingRegisterAddress[holdingRegisterAddress["fBleRxEn"] = 6] = "fBleRxEn";
+    holdingRegisterAddress[holdingRegisterAddress["onOff"] = 7] = "onOff";
 })(holdingRegisterAddress = exports.holdingRegisterAddress || (exports.holdingRegisterAddress = {}));
 var holdingRegistersAddress;
 (function (holdingRegistersAddress) {
@@ -77,6 +78,13 @@ var webCmd;
     webCmd[webCmd["postDimingBrightness"] = 8] = "postDimingBrightness";
     webCmd[webCmd["postDimingCT"] = 9] = "postDimingCT";
     webCmd[webCmd["postDimingXY"] = 10] = "postDimingXY";
+    webCmd[webCmd["postSwitchOnOff"] = 11] = "postSwitchOnOff";
     webCmd[webCmd["msgError"] = 404] = "msgError";
 })(webCmd = exports.webCmd || (exports.webCmd = {}));
+var driverlightType;
+(function (driverlightType) {
+    driverlightType[driverlightType["none"] = 0] = "none";
+    driverlightType[driverlightType["oneColor"] = 1] = "oneColor";
+    driverlightType[driverlightType["twoColor"] = 2] = "twoColor";
+})(driverlightType = exports.driverlightType || (exports.driverlightType = {}));
 //# sourceMappingURL=dataTypeModbus.js.map

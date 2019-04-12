@@ -106,7 +106,8 @@ export enum holdingRegisterAddress {
     brightnessMax,
     ckMin,
     ckMax,
-    fBleRxEn
+    fBleRxEn,
+    onOff
 }
 
 export enum holdingRegistersAddress {
@@ -177,8 +178,13 @@ export enum webCmd {
     postDimingBrightness,
     postDimingCT,
     postDimingXY,
+    postSwitchOnOff,
     msgError=404
   }
 
-  
+  export enum driverlightType{
+      none =0,
+      oneColor=1,
+      twoColor=2.
+  }
   
