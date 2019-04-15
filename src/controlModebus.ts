@@ -14,7 +14,7 @@ import * as DTMODBUS from './dataTypeModbus';
 
 import { promises, lstat } from 'fs';
 import { resolve } from 'path';
-
+  
 
 let timeFunctionInterval: number = 5;
 let maxLightIdKeep: number = 62;//max acount of light in a gw loop
