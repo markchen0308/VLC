@@ -13,6 +13,7 @@ export interface iDriver {
     manufactureID?: number;
     version?: number;
     bleEnable?:number;
+    onOff?:number;
 }
 
 

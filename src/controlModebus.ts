@@ -17,7 +17,7 @@ import { resolve } from 'path';
 
 
 let timeFunctionInterval: number = 5;
-let maxLightIdKeep: number = 10;//max acount of light in a gw loop
+let maxLightIdKeep: number = 62;//max acount of light in a gw loop
 let pollingTimeStep: number = 10;//polling time per light
 
 
@@ -743,7 +743,7 @@ export class ControlModbus {
                     driverInfo.lightType = value[inputregisterAddress.lightType];
                     driverInfo.Mac = value[inputregisterAddress.lightMacH].toString(16) + value[inputregisterAddress.lightMacM].toString(16) + value[inputregisterAddress.lightMacL].toString(16);
                     driverInfo.manufactureID = value[inputregisterAddress.manufactureID];
-                    readCount = holdingRegisterAddress.fBleRxEn + 1;
+                    readCount = holdingRegisterAddress.onOff + 1;
 
                     //after 5ms ,read holding register
                     setTimeout(() => {
@@ -756,6 +756,7 @@ export class ControlModbus {
                                 driverInfo.ckMin = value[holdingRegisterAddress.ckMin];
                                 driverInfo.ckMax = value[holdingRegisterAddress.ckMax];
                                 driverInfo.bleEnable = value[holdingRegisterAddress.fBleRxEn];
+                                driverInfo.onOff=value[holdingRegisterAddress.onOff];
                                 resolve(driverInfo);
                             })
                             .catch((errorMsg) => {
