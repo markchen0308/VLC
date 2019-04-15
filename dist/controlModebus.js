@@ -6,7 +6,7 @@ let configfilePath = './config.json';
 const modbusDriver_1 = require("./modbusDriver");
 const dataTypeModbus_1 = require("./dataTypeModbus");
 let timeFunctionInterval = 5;
-let maxLightIdKeep = 10; //max acount of light in a gw loop
+let maxLightIdKeep = 62; //max acount of light in a gw loop
 let pollingTimeStep = 10; //polling time per light
 var modbusErr;
 (function (modbusErr) {
@@ -629,7 +629,7 @@ class ControlModbus {
                 driverInfo.lightType = value[dataTypeModbus_1.inputregisterAddress.lightType];
                 driverInfo.Mac = value[dataTypeModbus_1.inputregisterAddress.lightMacH].toString(16) + value[dataTypeModbus_1.inputregisterAddress.lightMacM].toString(16) + value[dataTypeModbus_1.inputregisterAddress.lightMacL].toString(16);
                 driverInfo.manufactureID = value[dataTypeModbus_1.inputregisterAddress.manufactureID];
-                readCount = dataTypeModbus_1.holdingRegisterAddress.fBleRxEn + 1;
+                readCount = dataTypeModbus_1.holdingRegisterAddress.onOff + 1;
                 //after 5ms ,read holding register
                 setTimeout(() => {
                     this.masterRs485.readHoldingRegisters(dataTypeModbus_1.holdingRegisterAddress.brightness, readCount)
@@ -641,6 +641,7 @@ class ControlModbus {
                         driverInfo.ckMin = value[dataTypeModbus_1.holdingRegisterAddress.ckMin];
                         driverInfo.ckMax = value[dataTypeModbus_1.holdingRegisterAddress.ckMax];
                         driverInfo.bleEnable = value[dataTypeModbus_1.holdingRegisterAddress.fBleRxEn];
+                        driverInfo.onOff = value[dataTypeModbus_1.holdingRegisterAddress.onOff];
                         resolve(driverInfo);
                     })
                         .catch((errorMsg) => {
