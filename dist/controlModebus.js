@@ -8,6 +8,9 @@ const dataTypeModbus_1 = require("./dataTypeModbus");
 let timeFunctionInterval = 5;
 let maxLightIdKeep = 62; //max acount of light in a gw loop
 let pollingTimeStep = 10; //polling time per light
+let driverResPonseTimeout = 5;
+let nextCmdDleayTime = 1;
+let limitHandshake = 3; //max. acount of handshakeing
 var modbusErr;
 (function (modbusErr) {
     modbusErr[modbusErr["errBleDead"] = 0] = "errBleDead";
@@ -567,19 +570,38 @@ class ControlModbus {
     async getNetworkLightNumber() {
         let driversKeep = [];
         let id = 0;
+        let handshakeCount = 0;
+        let flagFounddDriver = false;
         for (let i = 0; i < maxLightIdKeep; i++) {
             id += 1;
-            console.log('*Start query Light : ' + id.toString());
-            await this.getLightInformation(id)
-                .then((value) => {
-                // console.log('Resopnse:');
-                // console.log(value);
-                driversKeep.push(value); //save driver
-            })
-                .catch((errorMsg) => {
-                console.log('Resopnse error:' + errorMsg);
-            });
-            await this.delay(pollingTimeStep); //read next light after 5msec
+            for (let j = 1; j <= limitHandshake; j++) {
+                if (j == 1) {
+                    console.log('Searching driver ' + id.toString() + ' ' + j.toString() + ' time');
+                }
+                else {
+                    console.log('Searching driver ' + id.toString() + ' ' + j.toString() + ' times');
+                }
+                await this.getLightInformation(id)
+                    .then((value) => {
+                    console.log('Driver ' + id.toString() + ' was found');
+                    driversKeep.push(value); //save driver
+                    flagFounddDriver = true;
+                })
+                    .catch((errorMsg) => {
+                    console.log('Driver' + id + 'response error : ' + errorMsg);
+                    flagFounddDriver = false;
+                });
+                if (flagFounddDriver) {
+                    flagFounddDriver = false;
+                    break; //jump out for loop and find next driver
+                }
+                else {
+                    if (j >= limitHandshake) {
+                        break; //jump out for loop and find next driver
+                    }
+                    await this.delay(nextCmdDleayTime); //read next light after 5msec
+                }
+            }
         }
         return new Promise((resolve, reject) => {
             resolve(driversKeep);
@@ -647,7 +669,7 @@ class ControlModbus {
                         .catch((errorMsg) => {
                         reject(errorMsg);
                     });
-                }, pollingTimeStep);
+                }, driverResPonseTimeout);
             })
                 .catch((errorMsg) => {
                 reject(errorMsg); //error

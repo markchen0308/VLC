@@ -1,4 +1,7 @@
 {
+    "account":"mark",
+    "passwd":"mark",
+
     "webserverIp":"127.0.0.1",
     "webserverPort": 80,
    
@@ -16,5 +19,3 @@
 
     "gwLanName":"wlp3s0"
 }
-
-

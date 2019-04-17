@@ -14,12 +14,14 @@ import * as DTMODBUS from './dataTypeModbus';
 
 import { promises, lstat } from 'fs';
 import { resolve } from 'path';
-  
+
 
 let timeFunctionInterval: number = 5;
 let maxLightIdKeep: number = 62;//max acount of light in a gw loop
 let pollingTimeStep: number = 10;//polling time per light
-
+let driverResPonseTimeout=5;
+let nextCmdDleayTime=1;
+let limitHandshake: number = 3;//max. acount of handshakeing
 
 enum modbusErr {
     errBleDead,
@@ -480,7 +482,7 @@ export class ControlModbus {
                             break;
 
                         case webCmd.postDimingCT:
-                            console.log("dim ct "+cmdLightID);
+                            console.log("dim ct " + cmdLightID);
                             await this.setCT(cmdLightID, cmd.cmdData.CT, cmd.cmdData.brightness)
                                 .then((value) => {
                                     console.log(value);
@@ -678,19 +680,43 @@ export class ControlModbus {
     async getNetworkLightNumber(): Promise<iDriver[]> {
         let driversKeep: iDriver[] = [];
         let id = 0;
+        let handshakeCount: number = 0;
+        let flagFounddDriver:boolean=false;
         for (let i: number = 0; i < maxLightIdKeep; i++) {
             id += 1;
-            console.log('*Start query Light : ' + id.toString());
-            await this.getLightInformation(id)
-                .then((value) => {//value is driverInfo
-                    // console.log('Resopnse:');
-                    // console.log(value);
-                    driversKeep.push(value);//save driver
-                })
-                .catch((errorMsg) => {
-                    console.log('Resopnse error:' + errorMsg);
-                });
-            await this.delay(pollingTimeStep);//read next light after 5msec
+            for (let j: number = 1; j <= limitHandshake; j++) {
+                if (j == 1) {
+                    console.log('Searching driver ' + id.toString() + ' ' + j.toString() + ' time');
+                }
+                else {
+                    console.log('Searching driver ' + id.toString() + ' ' + j.toString() + ' times');
+                }
+
+                await this.getLightInformation(id)
+                    .then((value) => {//value is driverInfo
+                        console.log('Driver ' + id.toString() + ' was found' );
+                        driversKeep.push(value);//save driver
+                        flagFounddDriver=true;
+                    })
+                    .catch((errorMsg) => {
+                        console.log('Driver' + id + 'response error : ' + errorMsg);
+                        flagFounddDriver=false;
+                    });
+                
+                if(flagFounddDriver)
+                {
+                    flagFounddDriver=false;
+                    break;//jump out for loop and find next driver
+                }
+                else
+                {
+                    if(j >= limitHandshake)
+                    {
+                        break;//jump out for loop and find next driver
+                    }
+                    await this.delay(nextCmdDleayTime);//read next light after 5msec
+                }   
+            }
         }
 
         return new Promise<iDriver[]>((resolve, reject) => {
@@ -756,13 +782,13 @@ export class ControlModbus {
                                 driverInfo.ckMin = value[holdingRegisterAddress.ckMin];
                                 driverInfo.ckMax = value[holdingRegisterAddress.ckMax];
                                 driverInfo.bleEnable = value[holdingRegisterAddress.fBleRxEn];
-                                driverInfo.onOff=value[holdingRegisterAddress.onOff];
+                                driverInfo.onOff = value[holdingRegisterAddress.onOff];
                                 resolve(driverInfo);
                             })
                             .catch((errorMsg) => {
                                 reject(errorMsg);
                             })
-                    }, pollingTimeStep);
+                    }, driverResPonseTimeout);
                 })
                 .catch((errorMsg) => { //timeout
                     reject(errorMsg);//error
