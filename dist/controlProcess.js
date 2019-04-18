@@ -207,7 +207,7 @@ class ControlProcess {
                 for (let j = 0; j < this.drivers.length; j++) {
                     if (cmd.cmdData.driverId == this.drivers[j].lightID) {
                         index = j;
-                        console.log("index=" + index);
+                        //console.log("index=" + index);
                         break;
                     }
                 }
