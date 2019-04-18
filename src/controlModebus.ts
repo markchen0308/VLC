@@ -695,11 +695,12 @@ export class ControlModbus {
                 await this.getLightInformation(id)
                     .then((value) => {//value is driverInfo
                         console.log('Driver ' + id.toString() + ' was found' );
-                        driversKeep.push(value);//save driver
                         flagFounddDriver=true;
+                        driversKeep.push(value);//save driver
+                        
                     })
                     .catch((errorMsg) => {
-                        console.log('Driver' + id + 'response error : ' + errorMsg);
+                        console.log('Driver ' + id + ' response error : ' + errorMsg);
                         flagFounddDriver=false;
                     });
                 
@@ -729,6 +730,8 @@ export class ControlModbus {
         let driversKeep: iDriver[] = [];
         let id: number = 0;
         let driverIDs: number[] = [];
+        let handshakeCount: number = 0;
+        let flagFounddDriver:boolean=false;
         //backup driver ID
         this.drivers.forEach(driver => {
             driverIDs.push(driver.lightID);
@@ -736,16 +739,40 @@ export class ControlModbus {
         for (let i: number = 0; i < driverIDs.length; i++) {
             id = driverIDs[i];
             console.log('*Start query Light : ' + id.toString());
-            await this.getLightInformation(id)
-                .then((value) => {//value is driverInfo
-                    // console.log('Resopnse:');
-                    // console.log(value);
-                    driversKeep.push(value);//save driver
-                })
-                .catch((errorMsg) => {
-                    console.log('Resopnse error:' + errorMsg);
-                });
-            await this.delay(pollingTimeStep);//read next light after 5msec
+            for (let j: number = 1; j <= limitHandshake; j++) {
+                if (j == 1) {
+                    console.log('Searching driver ' + id.toString() + ' ' + j.toString() + ' time');
+                }
+                else {
+                    console.log('Searching driver ' + id.toString() + ' ' + j.toString() + ' times');
+                }
+
+                await this.getLightInformation(id)
+                    .then((value) => {//value is driverInfo
+                        console.log('Driver ' + id.toString() + ' was found' );
+                        flagFounddDriver=true;
+                        driversKeep.push(value);//save driver
+                        
+                    })
+                    .catch((errorMsg) => {
+                        console.log('Driver ' + id + ' response error : ' + errorMsg);
+                        flagFounddDriver=false;
+                    });
+                
+                if(flagFounddDriver)
+                {
+                    flagFounddDriver=false;
+                    break;//jump out for loop and find next driver
+                }
+                else
+                {
+                    if(j >= limitHandshake)
+                    {
+                        break;//jump out for loop and find next driver
+                    }
+                    await this.delay(nextCmdDleayTime);//read next light after 5msec
+                }   
+            }
         }
 
         return new Promise<iDriver[]>((resolve, reject) => {
