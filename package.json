@@ -17,7 +17,7 @@
     "child": "^0.0.3",
     "child_process": "^1.0.2",
     "enum": "^2.5.0",
-    "express": "^4.16.3",
+    "express": "^4.16.4",
     "method-override": "^3.0.0",
     "modbus-serial": "^7.4.2",
     "net": "^1.0.2",
