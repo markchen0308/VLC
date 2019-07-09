@@ -201,7 +201,8 @@ export class ControlModbus {
             await this.exeControlCmd();//execute cmd in queue
             await this.delay(10);
             //update driver infomation
-            await this.updateExistNetworkLight()
+            /* 
+                await this.updateExistNetworkLight()
                 .then((value) => {
                     if (value.length > 0) {
                         this.drivers = value;
@@ -218,6 +219,7 @@ export class ControlModbus {
                         console.log("no device");
                     }
                 });
+            */
         }
 
         //if (this.fPollingEn == true)//allow polling

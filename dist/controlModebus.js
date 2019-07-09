@@ -154,22 +154,25 @@ class ControlModbus {
             await this.exeControlCmd(); //execute cmd in queue
             await this.delay(10);
             //update driver infomation
-            await this.updateExistNetworkLight()
+            /*
+                await this.updateExistNetworkLight()
                 .then((value) => {
-                if (value.length > 0) {
-                    this.drivers = value;
-                    let cmd = {
-                        cmdtype: dataTypeModbus_1.modbusCmd.driverInfo,
-                        cmdData: this.drivers
-                    };
-                    //send driver status to controprocess
-                    this.sendModbusMessage2Server(cmd); //sent driver information to server
-                }
-                else {
-                    this.drivers.length = 0;
-                    console.log("no device");
-                }
-            });
+                    if (value.length > 0) {
+                        this.drivers = value;
+                        let cmd: DTCMD.iCmd =
+                        {
+                            cmdtype: modbusCmd.driverInfo,
+                            cmdData: this.drivers
+                        }
+                        //send driver status to controprocess
+                        this.sendModbusMessage2Server(cmd);//sent driver information to server
+                    }
+                    else {
+                        this.drivers.length = 0;
+                        console.log("no device");
+                    }
+                });
+            */
         }
         //if (this.fPollingEn == true)//allow polling
         //{
