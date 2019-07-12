@@ -245,7 +245,6 @@ class ControlProcess {
                     this.exeWebCmdPostDimTemperatureAll(cmd);
                 }
                 else {
-                    console.log('test');
                     this.exeWebCmdPostDimTemperature(index, cmd);
                 }
                 // this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
