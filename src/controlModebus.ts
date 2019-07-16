@@ -311,6 +311,33 @@ export class ControlModbus {
                 })
         });
     }
+   //-----------------------------------------------------------------------------------------
+   async setAllBrightness( brightness: number): Promise<boolean> {
+    let flag: boolean = false;
+    //for (let i: number = 0; i < this.drivers.length; i++) {
+        //this.masterRs485.setSlaveID(this.drivers[i].lightID);
+        this.masterRs485.setSlaveID(0);
+        await this.masterRs485.writeSingleRegister(holdingRegisterAddress.brightness ,brightness)
+            .then((value) => {
+                flag = true;
+                console.dir(value);//return data length
+            })
+            .catch((errMsg) => {
+                flag = false;
+                console.dir(errMsg);
+            })
+       // await this.delay(pollingTimeStep);
+   // }
+    return new Promise<boolean>((resolve, reject) => {
+        if (flag == true) {
+            resolve(true)
+        }
+        else {
+            reject(false);
+        }
+    })
+}
+
     //---------------------------------------------------------------------------------------
     async cmdDimBrightness(lid: number, brightness: number) {
         await this.setBrightness(lid, brightness)
@@ -325,8 +352,9 @@ export class ControlModbus {
     //-----------------------------------------------------------------------------------------
     async setCT_All(ck: number, br: number): Promise<boolean> {
         let flag: boolean = false;
-        for (let i: number = 0; i < this.drivers.length; i++) {
-            this.masterRs485.setSlaveID(this.drivers[i].lightID);
+        //for (let i: number = 0; i < this.drivers.length; i++) {
+            //this.masterRs485.setSlaveID(this.drivers[i].lightID);
+            this.masterRs485.setSlaveID(0);
             await this.masterRs485.writeRegisters(holdingRegistersAddress.ck, [br, ck])
                 .then((value) => {
                     flag = true;
@@ -336,8 +364,8 @@ export class ControlModbus {
                     flag = false;
                     console.dir(errMsg);
                 })
-            await this.delay(pollingTimeStep);
-        }
+            //await this.delay(pollingTimeStep);
+       // }
         return new Promise<boolean>((resolve, reject) => {
             if (flag == true) {
                 resolve(true)
@@ -416,18 +444,19 @@ export class ControlModbus {
                 switch (cmd.cmdtype) {
 
                     case webCmd.postDimingBrightness:
+                        console.log("dim all brightness")
+                        await this.setAllBrightness(cmd.cmdData.brightness)                            
+                        .then((value) => {
+                            console.log(value);
+                        }).catch((reason) => {
+                            console.log(reason);
+                        })
+                    break;
 
-                        await this.setBrightness(cmdLightID, cmd.cmdData.brightness)
-                            .then((value) => {
-                                console.log(value);
-                            }).catch((reason) => {
-                                console.log(reason);
-                            })
 
-                        break;
-
+               
                     case webCmd.postDimingCT:
-                        console.log("dim ct all");
+                        console.log("dim all ct");
                         await this.setCT_All(cmd.cmdData.CT, cmd.cmdData.brightness)
                             .then((value) => {
                                 console.log(value);
@@ -575,7 +604,7 @@ export class ControlModbus {
 
                 this.sendModbusMessage2Server(cmd);//sent device package to server 
                 this.devPkgMember.forEach(item => {
-                    console.dir(item);
+                    //console.dir(item);
                 });
 
                 resolve(true);
@@ -643,7 +672,7 @@ export class ControlModbus {
             //read length
             this.getReadableNumber(lightID)
                 .then((value) => {//get byte length
-
+                    console.log('len='+value)
                     if ((value > 0) && (value < 255))//length>0
                     {
                         registerLen = value / 2;//register length=byte length /2
@@ -651,6 +680,7 @@ export class ControlModbus {
                             //read device location data after timeFunctionInterval,return register array
                             this.getDevicRegisterData(lightID, registerLen)
                                 .then((value) => {
+                                    
                                     resolve(value);
                                 })
                                 .catch((errorMsg) => {
@@ -909,6 +939,8 @@ export class ControlModbus {
                 dev.other = other;
                 break;
         }
+        console.log("get package:")
+        console.log(dev)
         return dev;
     }
 

@@ -1,5 +1,7 @@
 import { SocketWebServer } from './socketWebServer';
 import { SocketModbusServer } from './socketModbusServer';
+import { SocketRemoteClient } from './socketRemoteClient';
+
 import * as network from 'network';
 import * as DTCMD from './dataTypeCmd';
 import { PgControl } from './pgControl'
@@ -33,6 +35,8 @@ enum replyType {
 export class ControlProcess {
     webServer: SocketWebServer = new SocketWebServer();
     modbusServer: SocketModbusServer = new SocketModbusServer();
+    remoteClient: SocketRemoteClient = new SocketRemoteClient();
+
     pgCntrol: PgControl = new PgControl();
     GwIP: string;
     GwMAC: string;
@@ -138,6 +142,25 @@ export class ControlProcess {
                     devPkgCount: devPkg.length,
                     devPkgMember: devPkg
                 }
+                if (this.remoteClient.isRemoteServerHolding() ==true)//is remote server was connected
+                {
+                    let webPkg: iWebPkg = {};
+                    /*let gwInfoList: iGwInf[] = [];
+                    gwInfoList.push(gwInf);
+                    let gwPkg: iGwPkg = {
+                        GatewaySeqMin: gwInfoList[0].GatewaySeq,
+                        GatewaySeqMax: gwInfoList[0].GatewaySeq,
+                        DateTimeMin: gwInfoList[0].Datetime,
+                        DateTimeMax: gwInfoList[0].Datetime,
+                        GatewayHistoryCount: 1,
+                        GatewayHistoryMember: gwInfoList
+                    };*/
+                    webPkg.reply=1;
+                    webPkg.msg=gwInf;
+                 //   console.log("parepare data to socket server:")
+                  //  console.log(webPkg)
+                    this.remoteClient.sendMsg2Server(JSON.stringify(webPkg));
+                }
                 // console.dir(gwInf);//show 
                 this.saveGwInfDataInLimitQueue(gwInf, MaxDataQueueLength);//save in last n queue
                 this.GatewayHistoryMember.push(gwInf);//save to history memory
@@ -145,6 +168,7 @@ export class ControlProcess {
                 break;
         }
     }
+
 
     //----------------------------------------------------------------------------------------
     //get the gateway network ip and mac
@@ -293,12 +317,23 @@ export class ControlProcess {
                 this.replyWebCmdGetDriverInfo(index, cmd);
                 break;
 
+            case webCmd.setClientServer:
+                console.log('get server start cmd')
+                this.replyWebCmdSetRemoteServer(cmd);
+                break;
+
             case webCmd.postReset:
                 this.exeWebCmdPostReset();
                 break;
 
             case webCmd.postDimingBrightness:
-                this.exeWebCmdPostBrightness(index, cmd);
+                if (index == 255) {
+                    this.exeWebCmdPostBrightnessAll(cmd);
+                }
+                else {
+                    
+                    this.exeWebCmdPostBrightness(index, cmd);
+                }
                 break;
 
             case webCmd.postDimingCT:
@@ -665,6 +700,30 @@ export class ControlProcess {
 
     }
     //---------------------------------------------------------------------------------
+    replyWebCmdSetRemoteServer(cmd: DTCMD.iCmd) {
+
+        let webPkg: iWebPkg = {};
+
+        if (this.remoteClient.isRemoteServerHolding() == false) {
+         
+            let ip: string = cmd.cmdData.serverIP;
+            let port: number = cmd.cmdData.serverPort;
+            webPkg.reply = 1;
+            let msg: string = "Starting client to connect server."
+            webPkg.msg = msg;
+            this.webServer.sendMessage(JSON.stringify(webPkg));
+            this.remoteClient.setClientSeverInfo(ip, port);//save ip and port
+            this.remoteClient.configureClient();//connect server
+        }
+        else {
+            webPkg.reply = 0;
+            let msg: string = "Client has been connected to server."
+            webPkg.msg = msg;
+            this.webServer.sendMessage(JSON.stringify(webPkg));
+        }
+
+    }
+    //---------------------------------------------------------------------------------
     exeWebCmdPostReset() {
 
         let cmd: DTCMD.iCmd;
@@ -673,12 +732,9 @@ export class ControlProcess {
     }
     //-----------------------------------------------------------------------------------
     exeWebCmdPostBrightness(index: number, cmd: DTCMD.iCmd) {
+        console.log('get exeWebCmdPostBrightness')
         if (index >= 0) {
-            if (cmd.cmdData.brightness == 0) {
-                this.modbusServer.sendMessage(cmd);//sent to modbus
-                this.replyWebseverOk(replyType.okBrightness);
-            }
-            else if ((cmd.cmdData.brightness >= this.drivers[index].brightnessMin) && (cmd.cmdData.brightness <= this.drivers[index].brightnessMax)) {
+           if ((cmd.cmdData.brightness >= this.drivers[index].brightnessMin) && (cmd.cmdData.brightness <= this.drivers[index].brightnessMax)) {
                 this.modbusServer.sendMessage(cmd);//sent to modbus
                 this.replyWebseverOk(replyType.okBrightness);
             }
@@ -688,6 +744,25 @@ export class ControlProcess {
         }
         else {
             this.replyWebseverFail(replyType.failID);
+        }
+    }
+    //-----------------------------------------------------------------------------------
+    exeWebCmdPostBrightnessAll(cmd: DTCMD.iCmd) {
+        console.log('dim all bright')
+        let flag: boolean = true;
+        for (let index: number = 0; index < this.drivers.length; index++) {
+            if ((cmd.cmdData.brightness < this.drivers[index].brightnessMin) || (cmd.cmdData.brightness > this.drivers[index].brightnessMax)) {
+                flag = false;
+                break;
+            }
+        }
+
+        if (flag == true) {
+            this.modbusServer.sendMessage(cmd);//sent to modbus
+            this.replyWebseverOk(replyType.okBrightness);
+        }
+        else {
+            this.replyWebseverFail(replyType.failBrightness);
         }
     }
     //-----------------------------------------------------------------------------------
@@ -707,14 +782,13 @@ export class ControlProcess {
                     this.modbusServer.sendMessage(cmd);//sent to modbus
                     this.replyWebseverOk(replyType.okCT);
                 }
-                else {
+                else { 
                     this.replyWebseverFail(replyType.failCT);
                 }
             }
             else if ((brightness >= this.drivers[index].brightnessMin) && (brightness <= this.drivers[index].brightnessMax)) {
 
                 if ((CT >= this.drivers[index].ckMin) && (CT <= this.drivers[index].ckMax)) {
-
                     this.modbusServer.sendMessage(cmd);//sent to modbus
                     this.replyWebseverOk(replyType.okCT);
                 }

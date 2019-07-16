@@ -259,6 +259,32 @@ class ControlModbus {
             });
         });
     }
+    //-----------------------------------------------------------------------------------------
+    async setAllBrightness(brightness) {
+        let flag = false;
+        //for (let i: number = 0; i < this.drivers.length; i++) {
+        //this.masterRs485.setSlaveID(this.drivers[i].lightID);
+        this.masterRs485.setSlaveID(0);
+        await this.masterRs485.writeSingleRegister(dataTypeModbus_1.holdingRegisterAddress.brightness, brightness)
+            .then((value) => {
+            flag = true;
+            console.dir(value); //return data length
+        })
+            .catch((errMsg) => {
+            flag = false;
+            console.dir(errMsg);
+        });
+        // await this.delay(pollingTimeStep);
+        // }
+        return new Promise((resolve, reject) => {
+            if (flag == true) {
+                resolve(true);
+            }
+            else {
+                reject(false);
+            }
+        });
+    }
     //---------------------------------------------------------------------------------------
     async cmdDimBrightness(lid, brightness) {
         await this.setBrightness(lid, brightness)
@@ -272,19 +298,20 @@ class ControlModbus {
     //-----------------------------------------------------------------------------------------
     async setCT_All(ck, br) {
         let flag = false;
-        for (let i = 0; i < this.drivers.length; i++) {
-            this.masterRs485.setSlaveID(this.drivers[i].lightID);
-            await this.masterRs485.writeRegisters(dataTypeModbus_1.holdingRegistersAddress.ck, [br, ck])
-                .then((value) => {
-                flag = true;
-                console.dir(value); //return data length
-            })
-                .catch((errMsg) => {
-                flag = false;
-                console.dir(errMsg);
-            });
-            await this.delay(pollingTimeStep);
-        }
+        //for (let i: number = 0; i < this.drivers.length; i++) {
+        //this.masterRs485.setSlaveID(this.drivers[i].lightID);
+        this.masterRs485.setSlaveID(0);
+        await this.masterRs485.writeRegisters(dataTypeModbus_1.holdingRegistersAddress.ck, [br, ck])
+            .then((value) => {
+            flag = true;
+            console.dir(value); //return data length
+        })
+            .catch((errMsg) => {
+            flag = false;
+            console.dir(errMsg);
+        });
+        //await this.delay(pollingTimeStep);
+        // }
         return new Promise((resolve, reject) => {
             if (flag == true) {
                 resolve(true);
@@ -353,7 +380,8 @@ class ControlModbus {
             if (cmdLightID == 255) { //group control
                 switch (cmd.cmdtype) {
                     case dataTypeModbus_1.webCmd.postDimingBrightness:
-                        await this.setBrightness(cmdLightID, cmd.cmdData.brightness)
+                        console.log("dim all brightness");
+                        await this.setAllBrightness(cmd.cmdData.brightness)
                             .then((value) => {
                             console.log(value);
                         }).catch((reason) => {
@@ -361,7 +389,7 @@ class ControlModbus {
                         });
                         break;
                     case dataTypeModbus_1.webCmd.postDimingCT:
-                        console.log("dim ct all");
+                        console.log("dim all ct");
                         await this.setCT_All(cmd.cmdData.CT, cmd.cmdData.brightness)
                             .then((value) => {
                             console.log(value);
@@ -479,7 +507,7 @@ class ControlModbus {
                 //send location information to controlprocess
                 this.sendModbusMessage2Server(cmd); //sent device package to server 
                 this.devPkgMember.forEach(item => {
-                    console.dir(item);
+                    //console.dir(item);
                 });
                 resolve(true);
             }
@@ -539,6 +567,7 @@ class ControlModbus {
             //read length
             this.getReadableNumber(lightID)
                 .then((value) => {
+                console.log('len=' + value);
                 if ((value > 0) && (value < 255)) //length>0
                  {
                     registerLen = value / 2; //register length=byte length /2
@@ -778,6 +807,8 @@ class ControlModbus {
                 dev.other = other;
                 break;
         }
+        console.log("get package:");
+        console.log(dev);
         return dev;
     }
     //--------------------------------------------------------------------------------------------------
