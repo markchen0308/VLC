@@ -175,6 +175,7 @@ export enum webCmd {
     getYesterday,
     getDate,
     getDriver,
+    setClientServer,
     postReset,
     postDimingBrightness,
     postDimingCT,

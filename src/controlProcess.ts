@@ -302,11 +302,12 @@ export class ControlProcess {
                 break;
 
             case webCmd.postDimingCT:
+                
                 if (index == 255) {
                     this.exeWebCmdPostDimTemperatureAll(cmd);
                 }
                 else {
-                    console.log('test')
+                    
                     this.exeWebCmdPostDimTemperature(index, cmd);
                 }
 
