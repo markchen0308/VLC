@@ -683,7 +683,7 @@ export class ControlProcess {
                     version:1,
                     bleEnable:0
                 } 
-                 */
+                 */  
                 webPkg.reply = 1;
                 webPkg.msg = driver;
                 let webMsg: string = JSON.stringify(webPkg);//encrypt
