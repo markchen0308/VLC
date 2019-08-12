@@ -108,7 +108,8 @@ export enum holdingRegisterAddress {
     ckMin,
     ckMax,
     fBleRxEn,
-    onOff
+    onOff,
+    queryTime
 }
 
 export enum holdingRegistersAddress {

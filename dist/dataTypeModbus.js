@@ -10,6 +10,7 @@ var holdingRegisterAddress;
     holdingRegisterAddress[holdingRegisterAddress["ckMax"] = 5] = "ckMax";
     holdingRegisterAddress[holdingRegisterAddress["fBleRxEn"] = 6] = "fBleRxEn";
     holdingRegisterAddress[holdingRegisterAddress["onOff"] = 7] = "onOff";
+    holdingRegisterAddress[holdingRegisterAddress["queryTime"] = 8] = "queryTime";
 })(holdingRegisterAddress = exports.holdingRegisterAddress || (exports.holdingRegisterAddress = {}));
 var holdingRegistersAddress;
 (function (holdingRegistersAddress) {

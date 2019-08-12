@@ -22,6 +22,8 @@ let pollingTimeStep: number = 10;//polling time per light
 let driverResPonseTimeout=5;
 let nextCmdDleayTime=1;
 let limitHandshake: number = 3;//max. acount of handshakeing
+let scanPeriodSec:number=0.5  ;//sec
+let scanPeriodCount:number=scanPeriodSec/0.1;//convert second to counts
 
 enum modbusErr {
     errBleDead,
@@ -227,6 +229,8 @@ export class ControlModbus {
         console.log("enable BLE")
         await this.enBleReceive();
         await this.delay(10);
+        await this.bleScanTime();
+        await this.delay(10);
         this.devPkgMember.length = 0;//clear devPkgMember
         this.devPkgMember = [];
         console.log("polling")
@@ -274,6 +278,37 @@ export class ControlModbus {
         return new Promise<number[]>((resolve, reject) => {
             this.masterRs485.setSlaveID(lightID);
             this.masterRs485.writeSingleRegister(holdingRegisterAddress.fBleRxEn, 1)
+                .then((value) => {
+                    resolve(value);//return 
+                })
+                .catch((errorMsg) => {
+                    reject(errorMsg);
+                })
+        });
+    }
+        //--------------------------------------------------------------------------------------------
+        async bleScanTime(): Promise<boolean> {
+            // for (let i = 0; i < this.drivers.length; i++) {
+            //     console.log("enable ble receive of light " + this.drivers[i].lightID);
+            //     await this.delay(pollingTimeStep);//delay 5ms
+            await this.setBleScanTime(scanPeriodCount)//broadcast read device information,get register array,            await this.setBlefBleRxEn(this.drivers[i].lightID)//read device information,get register array
+                .then((value) => {
+                    console.log(value);
+    
+                })
+                .catch((err) => {
+                    console.log(err);
+                })
+            return new Promise<boolean>((resolve, reject) => {
+                resolve(true);
+            })
+        }
+            //---------------------------------------------------------------------------------------
+    //set ble scan time
+    setBleScanTime(period: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.masterRs485.setSlaveID(0);
+            this.masterRs485.writeSingleRegister(holdingRegisterAddress.queryTime, period)
                 .then((value) => {
                     resolve(value);//return 
                 })
