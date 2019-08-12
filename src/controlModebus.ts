@@ -418,7 +418,7 @@ export class ControlModbus {
                 })
         });
     }
-
+   
     //------------------------------------------------------------------------------------------
     async exeControlCmd(): Promise<boolean> {
         let cmd: DTCMD.iCmd;
