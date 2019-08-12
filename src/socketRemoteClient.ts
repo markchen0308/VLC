@@ -44,7 +44,7 @@ export class SocketRemoteClient {
     {      
         this.socketRemoteClient = Net.connect(this.socketRemoteServerPort, this.socketRemoteServerIP, () => {
             //console.log(`modbusClient connected to: ${this.socketRemoteClient.address} :  ${this.socketRemoteClient.localPort}`);
-            console.log("remote server connected at ");
+            console.log("Remote server connected. IP:"+ this.socketRemoteServerIP +',port:this.socketRemoteServerPort');
 
             this.flagServerStatus = true;
             this.sendMsg2Server("Hello,I'm VLC client\n")//sent cmd data to server
@@ -58,12 +58,7 @@ export class SocketRemoteClient {
 
         })
 
-        this.socketRemoteClient.on('end', () => {
-            console.log('remote client disconnected');
-                        this.flagServerStatus = true;
-
-            this.flagServerStatus = false;
-        });
+      
 
         // received server cmd data \
         this.socketRemoteClient.on('data', (data) => {
