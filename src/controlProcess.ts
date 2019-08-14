@@ -164,7 +164,7 @@ export class ControlProcess {
                 }
                 else
                 {
-                    
+
                 }
                 // console.dir(gwInf);//show 
                 this.saveGwInfDataInLimitQueue(gwInf, MaxDataQueueLength);//save in last n queue
@@ -706,7 +706,7 @@ export class ControlProcess {
     }
     //---------------------------------------------------------------------------------
     replyWebCmdSetRemoteServer(cmd: DTCMD.iCmd) {
-
+    
         let webPkg: iWebPkg = {};
 
         if (this.remoteClient.isRemoteServerHolding() == false) {
