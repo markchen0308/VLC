@@ -50,6 +50,7 @@ class SocketRemoteClient {
             });
         });
         this.socketRemoteClient.on('error', (err) => {
+            this.flagServerStatus = false;
             console.log('remote server error:');
             console.log(err);
         });
