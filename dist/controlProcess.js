@@ -128,6 +128,8 @@ class ControlProcess {
                     //  console.log(webPkg)
                     this.remoteClient.sendMsg2Server(JSON.stringify(webPkg));
                 }
+                else {
+                }
                 // console.dir(gwInf);//show 
                 this.saveGwInfDataInLimitQueue(gwInf, MaxDataQueueLength); //save in last n queue
                 this.GatewayHistoryMember.push(gwInf); //save to history memory
@@ -865,4 +867,3 @@ class ControlProcess {
 }
 exports.ControlProcess = ControlProcess;
 let controlProcess = new ControlProcess();
-//# sourceMappingURL=controlProcess.js.map

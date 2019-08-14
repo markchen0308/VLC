@@ -14,7 +14,10 @@
     "scoketModbusServerIP":"localhost",
     "scoketModbusServerPort":10002,  
 
-    "gwLanName":"wlp3s0"
+    "socketRemoteServerIP":"127.0.0.1",
+    "socketRemoteServerPort":6996,
+
+    "gwLanName":"wlp3s0",
 }
 
 

@@ -89,4 +89,3 @@ var driverlightType;
     driverlightType[driverlightType["oneColor"] = 1] = "oneColor";
     driverlightType[driverlightType["twoColor"] = 2] = "twoColor";
 })(driverlightType = exports.driverlightType || (exports.driverlightType = {}));
-//# sourceMappingURL=dataTypeModbus.js.map

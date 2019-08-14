@@ -46,4 +46,3 @@ class CP_PROTOCOL {
 exports.CP_PROTOCOL = CP_PROTOCOL;
 let cpControl = new CP_PROTOCOL(); // protocols controller of child process
 exports.cpControl = cpControl;
-//# sourceMappingURL=datatype.js.map

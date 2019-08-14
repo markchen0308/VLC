@@ -6,6 +6,7 @@ let configfilePath = './config.json';
 class SocketRemoteClient {
     constructor() {
         //console.log("start socket client to wait remote socket server");
+        this.socketRemoteClient = null;
         this.socket = null;
         this.flagServerStatus = false;
     }
@@ -35,19 +36,22 @@ class SocketRemoteClient {
             //console.log(`modbusClient connected to: ${this.socketRemoteClient.address} :  ${this.socketRemoteClient.localPort}`);
             console.log("Remote server connected. IP:" + this.socketRemoteServerIP + ',port:this.socketRemoteServerPort');
             this.flagServerStatus = true;
-            this.sendMsg2Server("Hello,I'm VLC client\n"); //sent cmd data to server
+            // received server cmd data \
+            this.socketRemoteClient.on('data', (data) => {
+                //let temp: any = data;
+                //let cmd: DTCMD.iCmd = JSON.parse(temp);
+                //this.parseControlServerCmd(cmd);
+                console.log('Get remote server data:' + data);
+            });
+            //this.socketRemoteClient.setEncoding('utf8');
+            this.socketRemoteClient.on('close', () => {
+                console.log('remote server disconnected!');
+                this.flagServerStatus = false;
+            });
         });
-        //this.socketRemoteClient.setEncoding('utf8');
-        this.socketRemoteClient.on('close', () => {
-            console.log('remote server disconnected!');
-            this.flagServerStatus = false;
-        });
-        // received server cmd data \
-        this.socketRemoteClient.on('data', (data) => {
-            //let temp: any = data;
-            //let cmd: DTCMD.iCmd = JSON.parse(temp);
-            //this.parseControlServerCmd(cmd);
-            console.log('Get remote server data:' + data);
+        this.socketRemoteClient.on('error', (err) => {
+            console.log('remote server error:');
+            console.log(err);
         });
     }
     //-----------------------------------------------------------------------------------
@@ -61,4 +65,3 @@ class SocketRemoteClient {
     }
 }
 exports.SocketRemoteClient = SocketRemoteClient;
-//# sourceMappingURL=socketRemoteClient.js.map

@@ -142,6 +142,7 @@ export class ControlProcess {
                     devPkgCount: devPkg.length,
                     devPkgMember: devPkg
                 }
+
                 if (this.remoteClient.isRemoteServerHolding() ==true)//is remote server was connected
                 {
                     let webPkg: iWebPkg = {};
@@ -160,6 +161,10 @@ export class ControlProcess {
                  //   console.log("parepare data to socket server:")
                   //  console.log(webPkg)
                     this.remoteClient.sendMsg2Server(JSON.stringify(webPkg));
+                }
+                else
+                {
+                    
                 }
                 // console.dir(gwInf);//show 
                 this.saveGwInfDataInLimitQueue(gwInf, MaxDataQueueLength);//save in last n queue

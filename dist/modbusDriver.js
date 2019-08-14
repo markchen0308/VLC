@@ -197,4 +197,3 @@ class ModbusRTU {
 }
 exports.ModbusRTU = ModbusRTU;
 //----------------------------------------------------------------
-//# sourceMappingURL=modbusDriver.js.map

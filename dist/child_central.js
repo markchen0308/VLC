@@ -150,4 +150,3 @@ class CentralControll {
 }
 let centralControll = new CentralControll(); //process control
 //let pg = new PgControl();//process control
-//# sourceMappingURL=child_central.js.map

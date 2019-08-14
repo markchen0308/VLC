@@ -30,4 +30,3 @@ class OSControl {
     }
 }
 exports.OSControl = OSControl;
-//# sourceMappingURL=osControl.js.map

@@ -983,4 +983,3 @@ class ControlModbus {
 }
 exports.ControlModbus = ControlModbus;
 let modebusControl = new ControlModbus();
-//# sourceMappingURL=controlModebus.js.map

@@ -66,4 +66,3 @@ class LOCATION_CONTROL {
     }
 }
 let locationControl = new LOCATION_CONTROL(); //process control
-//# sourceMappingURL=child_location.js.map

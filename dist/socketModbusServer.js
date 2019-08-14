@@ -42,4 +42,3 @@ class SocketModbusServer {
     }
 }
 exports.SocketModbusServer = SocketModbusServer;
-//# sourceMappingURL=socketModbusServer.js.map

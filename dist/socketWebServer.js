@@ -37,4 +37,3 @@ class SocketWebServer {
     }
 }
 exports.SocketWebServer = SocketWebServer;
-//# sourceMappingURL=socketWebServer.js.map

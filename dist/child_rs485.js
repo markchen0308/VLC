@@ -80,4 +80,3 @@ class RS485_CONTROL {
     }
 }
 let rs485Control = new RS485_CONTROL(); //process control
-//# sourceMappingURL=child_rs485.js.map
