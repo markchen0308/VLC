@@ -7,7 +7,7 @@ let ModbusSer = require('modbus-serial');
 
 export class ModbusRTU {
     exec = util.promisify(CP.exec);
-    public timeout: number = 20;
+    public timeout: number = 50;
     public rs485DeviceName: string = 'ttyUSB0';
     public devicePath: string = '/dev/' + this.rs485DeviceName;
     public baudrate: number =3000000;//baudrate =3m;
@@ -33,6 +33,7 @@ export class ModbusRTU {
             this.modbus_Master.connectRTU(this.devicePath, { baudRate: this.baudrate })
             //set limitation of response time
             this.modbus_Master.setTimeout(this.timeout);
+            this.modbus_Master.se
             console.log(this.rs485DeviceName + ' is exist!');
            
         }
@@ -124,7 +125,7 @@ export class ModbusRTU {
                     resolve(d.data);
                 })
                 .catch((e) => {
-                    console.log(e.message);
+                   // console.log(e.message);
                     reject(e.message);
                 });
         });
@@ -154,7 +155,7 @@ export class ModbusRTU {
                     resolve(d);
                 })
                 .catch((e) => {
-                    console.log(e.message);
+                   // console.log(e.message);
                     reject(e.message);
                 })
         });

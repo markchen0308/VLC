@@ -1,14 +1,18 @@
 {
-  "name": "VLC",
+  "name": "vlc",
   "version": "1.0.0",
   "main": "index.js",
-  "repository": "https://github.com/markchen0308/VLC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/markchen0308/VLC.git"
+  },
   "author": "markchen0308 <simonchen0308@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "@types/body-parser": "^1.17.0",
     "@types/express": "^4.16.0",
     "@types/method-override": "^0.0.31",
+    "@types/moment": "^2.13.0",
     "@types/node": "^10.5.5",
     "@types/pg": "^7.4.10",
     "@types/pg-format": "^1.0.0",
@@ -20,6 +24,7 @@
     "express": "^4.16.4",
     "method-override": "^3.0.0",
     "modbus-serial": "^7.4.2",
+    "moment": "^2.24.0",
     "net": "^1.0.2",
     "network": "^0.4.1",
     "os": "^0.1.1",
@@ -30,5 +35,10 @@
   },
   "scripts": {
     "tsc": "tsc"
-  }
+  },
+  "description": "node controlProcess.js",
+  "bugs": {
+    "url": "https://github.com/markchen0308/VLC/issues"
+  },
+  "homepage": "https://github.com/markchen0308/VLC#readme"
 }

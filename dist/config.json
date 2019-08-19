@@ -2,7 +2,7 @@
     "account":"mark",
     "passwd":"mark",
 
-    "webserverIp":"192.168.20.25",
+    "webserverIp":"127.0.0.1",
     "webserverPort": 80,
    
     "dbUser": "postgres", 

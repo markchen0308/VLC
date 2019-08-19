@@ -15,6 +15,8 @@ import * as DTMODBUS from './dataTypeModbus';
 import { promises, lstat } from 'fs';
 import { resolve } from 'path';
 
+let moment = require('moment');
+
 
 let timeFunctionInterval: number = 5;
 let maxLightIdKeep: number = 62;//max acount of light in a gw loop
@@ -24,6 +26,7 @@ let nextCmdDleayTime=1;
 let limitHandshake: number = 3;//max. acount of handshakeing
 let scanPeriodSec:number=0.5  ;//sec
 let scanPeriodCount:number=scanPeriodSec/0.1;//convert second to counts
+let cyclePollingPeriod:number=600;
 
 enum modbusErr {
     errBleDead,
@@ -32,6 +35,8 @@ enum modbusErr {
 }
 
 export class ControlModbus {
+
+    
 
     modbusClient: Net.Socket;
     modbusServerIP: string;
@@ -54,6 +59,12 @@ export class ControlModbus {
     constructor() {
         this.process();
     }
+    
+    getNowTime():string{
+        let str:string=moment().format('YYYY-MM-DD hh:mm:ss') 
+        return str;
+    }
+
     //-------------------------------------------------------------------------------
     async process() {
         this.startModbusClient();//create modbus client and connect to modbus server
@@ -187,9 +198,12 @@ export class ControlModbus {
 
 
         if (this.drivers.length > 0) {
-            console.log("enable BLE")
+            
+            console.log(this.getNowTime()+' Enable BLE')
+            this.masterRs485.modbus_Master.setTimeout(1);
             await this.enBleReceive();
-            await this.delay(1050);
+           
+            await this.delay(cyclePollingPeriod);
             this.runCmdProcess();//start polling driver and get location data
         }
     }
@@ -226,21 +240,24 @@ export class ControlModbus {
 
         //if (this.fPollingEn == true)//allow polling
         //{
-        console.log("enable BLE")
-        await this.enBleReceive();
-        await this.delay(10);
-        await this.bleScanTime();
-        await this.delay(10);
+        
+
+        //await this.bleScanTime();
+        //await this.delay(10);
+
         this.devPkgMember.length = 0;//clear devPkgMember
         this.devPkgMember = [];
-        console.log("polling")
+       
+        this.masterRs485.modbus_Master.setTimeout(this.masterRs485.timeout);
         await this.pollingLocationInfo();//ask input register location data
         this.timeRunCmd = 10;
         // }
-
+        console.log(this.getNowTime()+' Enable BLE')
+        this.masterRs485.modbus_Master.setTimeout(1);
+        await this.enBleReceive();
         setTimeout(() => {
             this.runCmdProcess();
-        }, 1000);// this.pollingTime);
+        }, cyclePollingPeriod);// this.pollingTime);
     }
     //------------------------------------------------------------------------------------
     async enBleReceive(): Promise<boolean> {
@@ -253,7 +270,7 @@ export class ControlModbus {
 
             })
             .catch((err) => {
-                console.log(err);
+                //console.log(err);
             })
         return new Promise<boolean>((resolve, reject) => {
             resolve(true);
@@ -601,9 +618,9 @@ export class ControlModbus {
         })
 
     }
-    //---------------------------------------------------------------------------------------
+    //-------------------------------------------------------------------------------------
     async pollingLocationInfo(): Promise<boolean> {
-        console.log("polling Location Data");
+        console.log(this.getNowTime()+' Polling Network.');
         for (let i = 0; i < this.drivers.length; i++) {
 
             await this.delay(pollingTimeStep);//delay 5ms
@@ -615,7 +632,7 @@ export class ControlModbus {
                 })
                 .catch((err) => {
                     if (err == modbusErr.errBleDead) {
-                        console.log("Ble is Dead!");
+                        console.log(this.getNowTime()+' Ble Is Dead!');
                     }
                     else if (err != modbusErr.errLenZero) {
                         console.log(err);
@@ -687,6 +704,7 @@ export class ControlModbus {
         let arrayDevicRegister: number[] = [];
         return new Promise<number[]>((resolve, reject) => {
             let startRegisterAddress: number = inputregisterAddress.g0Device000;
+            //console.log('lenRegister='+lenRegister)
             this.masterRs485.readInputRegisters(startRegisterAddress, lenRegister)
                 .then((value) => {
                     value.forEach(item => {
@@ -701,27 +719,31 @@ export class ControlModbus {
     }
     //------------------------------------------------------------------------
     //read device register of light
-    readDevicePosition(lightID: number): Promise<number[]> {
+    async readDevicePosition(lightID: number): Promise<number[]> {
         let registerLen: number;
         return new Promise<number[]>((resolve, reject) => {
             //read length
             this.getReadableNumber(lightID)
                 .then((value) => {//get byte length
                     console.log('len='+value)
+                    
                     if ((value > 0) && (value < 255))//length>0
                     {
                         registerLen = value / 2;//register length=byte length /2
-                        setTimeout(() => {
+                      
+                       // setTimeout(() => {
                             //read device location data after timeFunctionInterval,return register array
                             this.getDevicRegisterData(lightID, registerLen)
                                 .then((value) => {
-                                    
+                                    //console.log('val')
+                                    //console.log(value)
                                     resolve(value);
                                 })
                                 .catch((errorMsg) => {
+                                    
                                     reject(errorMsg);
                                 })
-                        }, timeFunctionInterval);
+                       // }, 10);//timeFunctionInterval
 
                     }
                     else {
