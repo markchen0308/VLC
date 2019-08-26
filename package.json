@@ -16,6 +16,7 @@
     "@types/node": "^10.5.5",
     "@types/pg": "^7.4.10",
     "@types/pg-format": "^1.0.0",
+    "@types/request": "^2.48.2",
     "@types/serialport": "^6.0.4",
     "body-parser": "^1.18.3",
     "child": "^0.0.3",
@@ -31,6 +32,7 @@
     "pg": "^7.4.3",
     "pg-format": "^1.0.4",
     "process": "^0.11.10",
+    "request": "^2.88.0",
     "typescript": "^3.0.1"
   },
   "scripts": {

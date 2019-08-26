@@ -17,5 +17,11 @@
     "scoketModbusServerIP":"localhost",
     "scoketModbusServerPort":10002,  
 
-    "gwLanName":"wlp3s0"
+    "gwLanName":"wlp3s0",
+
+    "mobolinkDir":"/home/itri/prj/agent_out/OMADM/",
+    "mobolinkFileDevInfo":"DevInfo_DataModel.dat",
+     "mobolinkSchemaUserName":"SchemaAdmin",
+     "mobolinkSchemaPw":"66473y752D",
+     "mobolinkSchemaId":"5d63aa8c0ed2d83228d8b6fd"
 }

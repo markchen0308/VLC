@@ -38,9 +38,6 @@ class SocketRemoteClient {
             this.flagServerStatus = true;
             // received server cmd data \
             this.socketRemoteClient.on('data', (data) => {
-                //let temp: any = data;
-                //let cmd: DTCMD.iCmd = JSON.parse(temp);
-                //this.parseControlServerCmd(cmd);
                 console.log('Get remote server data:' + data);
             });
             //this.socketRemoteClient.setEncoding('utf8');

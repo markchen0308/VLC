@@ -15,7 +15,6 @@ export class SocketRemoteClient {
 
     }
 
-
     setClientSeverInfo(ip: string, port: number) {
         this.socketRemoteServerIP = ip;
         this.socketRemoteServerPort = port;
@@ -51,9 +50,6 @@ export class SocketRemoteClient {
 
             // received server cmd data \
             this.socketRemoteClient.on('data', (data) => {
-                //let temp: any = data;
-                //let cmd: DTCMD.iCmd = JSON.parse(temp);
-                //this.parseControlServerCmd(cmd);
                 console.log('Get remote server data:' + data)
             });
 
@@ -71,12 +67,6 @@ export class SocketRemoteClient {
             console.log('remote server error:')
             console.log(err)
         })
-
-   
-
-
-
-
     }
 
     //-----------------------------------------------------------------------------------

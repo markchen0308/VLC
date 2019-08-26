@@ -18,6 +18,9 @@
     "socketRemoteServerPort":6996,
 
     "gwLanName":"wlp3s0",
+
+    "mobolinkDir":"/home/itri/prj/agent_out/OMADM",
+    "mobolinkDevInfo":"DevInfo_DataModel.dat"
 }
 
    
