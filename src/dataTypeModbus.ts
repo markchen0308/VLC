@@ -37,6 +37,27 @@ export interface iDevInfo {
     other?: {};
 }
 
+export interface iDevInfoAI {
+    type?: number;
+    mac?: string;
+    seq?: number;
+    lid1?: number;
+    lid2?: number;
+    lid3?: number;
+    lid4?: number;
+    lid5?: number;
+    br1?: number;
+    br2?: number;
+    br3?: number;
+    br4?: number;
+    br5?: number;
+    rssi?: number;
+    label?: number;
+    batPow?: number;
+    recLightID?: number;
+    other?: {};
+} 
+
 export interface iRxLightInfo
 {
     recLightID?:number;
@@ -62,7 +83,27 @@ export interface iDevPkg {
     rxLightCount?: number;
     rxLightInfo?: iRxLightInfo[];
 }
+export interface iDevPkgAI {
+    type?: number;
+    seq?:number;
+    mac?: string;
+    lid1?: number;
+    lid2?:number;
+    lid3?:number;
+    lid4?:number;
+    lid5?:number;
 
+    br1?: number;
+    br2?: number;
+    br3?: number;
+    br4?: number;
+    br5?: number;
+    label?: number;
+    batPow?: number;
+    other?: {};
+    rxLightCount?: number;
+    rxLightInfo?: iRxLightInfo[];
+}
 export interface iDripstand {
     weight?: number;
     speed?: number;
@@ -139,6 +180,11 @@ export enum deviceLength {
     dripStandLen = 30  //bytes
 }
 
+export enum deviceLengthAI {
+    tagLen = 24,  //bytes
+    dripStandLen = 30  //bytes
+}
+
 export enum devAddress {
     type = 0,
     seq = 1,
@@ -155,6 +201,26 @@ export enum devAddress {
     labelX = 20,
     labelY = 21,
     labelH = 22
+}
+
+export enum devAddressAI {
+    type = 0,
+    seq = 1,
+    Mac = 2,
+    lid1 = 8,
+    lid2 =9,
+    lid3 =10,
+    lid4 =11,
+    lid5 =12,
+    br1  =13,
+    br2  =15,
+    br3  =17,
+    br4  =19,
+    br5  =21,
+    rssi = 23,
+    batPow = 25,
+    label=26
+ 
 }
 
 export enum otherDripStandAddress {
