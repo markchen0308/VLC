@@ -181,7 +181,7 @@ export enum deviceLength {
 }
 
 export enum deviceLengthAI {
-    tagLen = 24,  //bytes
+    tagLen = 30,  //bytes
     dripStandLen = 30  //bytes
 }
 

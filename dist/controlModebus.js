@@ -5,6 +5,7 @@ let fs = require('fs');
 let configfilePath = './config.json';
 const modbusDriver_1 = require("./modbusDriver");
 const dataTypeModbus_1 = require("./dataTypeModbus");
+const DTMODBUS = require("./dataTypeModbus");
 let moment = require('moment');
 let timeFunctionInterval = 5;
 let maxLightIdKeep = 62; //max acount of light in a gw loop
@@ -21,12 +22,19 @@ var modbusErr;
     modbusErr[modbusErr["errLenZero"] = 1] = "errLenZero";
     modbusErr[modbusErr["errMsg"] = 2] = "errMsg";
 })(modbusErr || (modbusErr = {}));
+var systemMode;
+(function (systemMode) {
+    systemMode[systemMode["none"] = 0] = "none";
+    systemMode[systemMode["AI_5fft"] = 1] = "AI_5fft";
+})(systemMode || (systemMode = {}));
+let sysmod = systemMode.AI_5fft;
 class ControlModbus {
     //-------------------------------------------------------------------------------
     constructor() {
         this.masterRs485 = new modbusDriver_1.ModbusRTU();
         this.drivers = [];
         this.devPkgMember = [];
+        this.devPkgMemberAI = [];
         this.pollingTime = 1000;
         this.flagServerStatus = false;
         this.flagModbusStatus = false;
@@ -148,9 +156,27 @@ class ControlModbus {
         this.pollingTime = 1050 - this.drivers.length * pollingTimeStep;
         this.fPollingEn = true; //enable polling drivers
         if (this.drivers.length > 0) {
+            console.log("first setting ble scan time=" + scanPeriodSec + " second");
+            await this.bleScanTime();
+            await this.delay(10);
+            console.log("second setting ble scan time=" + scanPeriodSec + " second");
+            await this.bleScanTime();
+            await this.delay(10);
+            console.log("Third setting ble scan time=" + scanPeriodSec + " second");
+            await this.bleScanTime();
+            await this.delay(10);
             console.log(this.getNowTime() + ' Enable BLE');
             this.masterRs485.modbus_Master.setTimeout(1);
             await this.enBleReceive();
+            await this.delay(10);
+            console.log(this.getNowTime() + ' Enable BLE');
+            this.masterRs485.modbus_Master.setTimeout(1);
+            await this.enBleReceive();
+            await this.delay(10);
+            console.log(this.getNowTime() + ' Enable BLE');
+            this.masterRs485.modbus_Master.setTimeout(1);
+            await this.enBleReceive();
+            await this.delay(10);
             await this.delay(cyclePollingPeriod);
             this.runCmdProcess(); //start polling driver and get location data
         }
@@ -185,17 +211,25 @@ class ControlModbus {
         }
         //if (this.fPollingEn == true)//allow polling
         //{
-        //await this.bleScanTime();
-        //await this.delay(10);
         this.devPkgMember.length = 0; //clear devPkgMember
         this.devPkgMember = [];
         this.masterRs485.modbus_Master.setTimeout(this.masterRs485.timeout);
-        await this.pollingLocationInfo(); //ask input register location data
+        if (sysmod == systemMode.none) {
+            this.devPkgMember.length = 0; //clear devPkgMember
+            this.devPkgMember = [];
+            await this.pollingLocationInfo(); //ask input register location data
+        }
+        else {
+            console.log("AI mode");
+            this.devPkgMemberAI.length = 0; //clear devPkgMember
+            this.devPkgMemberAI = [];
+            await this.pollingLocationInfoAI(); //ask input register location data
+        }
         this.timeRunCmd = 10;
         // }
-        console.log(this.getNowTime() + ' Enable BLE');
-        this.masterRs485.modbus_Master.setTimeout(1);
-        await this.enBleReceive();
+        //console.log(this.getNowTime()+' Enable BLE')
+        //this.masterRs485.modbus_Master.setTimeout(1);
+        //await this.enBleReceive();
         setTimeout(() => {
             this.runCmdProcess();
         }, cyclePollingPeriod); // this.pollingTime);
@@ -557,6 +591,47 @@ class ControlModbus {
             }
         });
     }
+    //-------------------------------------------------------------------------------------
+    async pollingLocationInfoAI() {
+        console.log(this.getNowTime() + ' Polling Network.');
+        for (let i = 0; i < this.drivers.length; i++) {
+            await this.delay(pollingTimeStep); //delay 5ms
+            await this.readDevicePosition(this.drivers[i].lightID) //read device information,get register array
+                .then((value) => {
+                //console.log("data")
+                //console.dir(value)
+                //parse array and sort device
+                this.sortDeviceTableAI(this.drivers[i].lightID, value); //get sort of device package array,devPkgMember
+            })
+                .catch((err) => {
+                if (err == modbusErr.errBleDead) {
+                    console.log(this.getNowTime() + ' Ble Is Dead!');
+                }
+                else if (err != modbusErr.errLenZero) {
+                    console.log(err);
+                }
+                //console.log(err);//print error/len=0/ble is dead
+            });
+        }
+        return new Promise((resolve, reject) => {
+            if (this.devPkgMemberAI.length > 0) {
+                //write to server
+                let cmd = {
+                    cmdtype: dataTypeModbus_1.modbusCmd.location,
+                    cmdData: this.devPkgMemberAI
+                };
+                //send location information to controlprocess
+                this.sendModbusMessage2Server(cmd); //sent device package to server 
+                this.devPkgMemberAI.forEach(item => {
+                    console.dir(item);
+                });
+                resolve(true);
+            }
+            else {
+                resolve(false);
+            }
+        });
+    }
     //----------------------------------------------------------------------------------
     //read readable  number of register
     getReadableNumber(id) {
@@ -802,6 +877,36 @@ class ControlModbus {
         }
         return matix;
     }
+    //----------------------------------------------------------------------------------------
+    //number array to uint8  array matrix
+    getNumber2Uint8MatrixAI(num) {
+        let matix = [];
+        let start = 0;
+        let end = 0;
+        let len = 0;
+        let u8 = new Uint8Array(num.length * 2);
+        let i = 0;
+        num.forEach(item => {
+            u8[i++] = (item >> 8) & 0xFF;
+            u8[i++] = item & 0xFF;
+        });
+        while (end < (u8.length - 1)) {
+            if (u8[start] == dataTypeModbus_1.typesDevice.tag) {
+                len = DTMODBUS.deviceLengthAI.tagLen;
+            }
+            else if (u8[start] == dataTypeModbus_1.typesDevice.dripStand) {
+                len = DTMODBUS.deviceLengthAI.dripStandLen;
+            }
+            else {
+                break;
+            }
+            end = start + len;
+            let partOfArry = u8.subarray(start, end);
+            matix.push(partOfArry);
+            start = end;
+        }
+        return matix;
+    }
     //-----------------------------------------------------------------------------
     //2 bytes to number
     byte2Number(hbyte, lbyte) {
@@ -853,6 +958,53 @@ class ControlModbus {
         }
         console.log("get package:");
         console.log(dev);
+        return dev;
+    }
+    //--------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------
+    //get device content
+    paserProtocol2DevAI(recLightID, u8) {
+        let dev = {};
+        dev.type = u8[DTMODBUS.devAddressAI.type];
+        dev.seq = u8[DTMODBUS.devAddressAI.seq];
+        dev.mac = '';
+        for (let i = 5; i >= 0; i--) {
+            if (u8[DTMODBUS.devAddressAI.Mac + i] < 10) {
+                dev.mac += "0" + u8[DTMODBUS.devAddressAI.Mac + i].toString(16);
+            }
+            else {
+                dev.mac += u8[DTMODBUS.devAddressAI.Mac + i].toString(16);
+            }
+            if (i != 0) {
+                dev.mac += ":";
+            }
+        }
+        dev.lid1 = u8[DTMODBUS.devAddressAI.lid1];
+        dev.lid2 = u8[DTMODBUS.devAddressAI.lid2];
+        dev.lid3 = u8[DTMODBUS.devAddressAI.lid3];
+        dev.lid4 = u8[DTMODBUS.devAddressAI.lid4];
+        dev.lid5 = u8[DTMODBUS.devAddressAI.lid5];
+        dev.br1 = this.byte2Number(u8[DTMODBUS.devAddressAI.br1 + 1], u8[DTMODBUS.devAddressAI.br1]);
+        dev.br2 = this.byte2Number(u8[DTMODBUS.devAddressAI.br2 + 1], u8[DTMODBUS.devAddressAI.br2]);
+        dev.br3 = this.byte2Number(u8[DTMODBUS.devAddressAI.br3 + 1], u8[DTMODBUS.devAddressAI.br3]);
+        dev.br4 = this.byte2Number(u8[DTMODBUS.devAddressAI.br4 + 1], u8[DTMODBUS.devAddressAI.br4]);
+        dev.br5 = this.byte2Number(u8[DTMODBUS.devAddressAI.br5 + 1], u8[DTMODBUS.devAddressAI.br5]);
+        dev.rssi = -1 * this.byte2Number(u8[DTMODBUS.devAddressAI.rssi + 1], u8[DTMODBUS.devAddressAI.rssi]);
+        dev.batPow = u8[dataTypeModbus_1.devAddress.batPow];
+        dev.label = u8[DTMODBUS.devAddressAI.label];
+        dev.recLightID = recLightID;
+        switch (u8[0]) {
+            case dataTypeModbus_1.typesDevice.tag:
+                dev.other = {};
+                break;
+            case dataTypeModbus_1.typesDevice.dripStand:
+                let other = {};
+                other.weight = this.byte2Number(u8[dataTypeModbus_1.otherDripStandAddress.weight + 1], u8[dataTypeModbus_1.otherDripStandAddress.weight]);
+                other.speed = u8[dataTypeModbus_1.otherDripStandAddress.speed]; // this.byte2Number(u8[otherDripStandAddress.speed + 1], u8[otherDripStandAddress.speed]);
+                other.time = this.byte2Number(u8[dataTypeModbus_1.otherDripStandAddress.time + 1], u8[dataTypeModbus_1.otherDripStandAddress.time]);
+                dev.other = other;
+                break;
+        }
         return dev;
     }
     //--------------------------------------------------------------------------------------------------
@@ -973,6 +1125,125 @@ class ControlModbus {
         }
     }
     //----------------------------------------------------------------------------------
+    //group device by device mac
+    sortDevAI(dev) {
+        let isContainDevice = false;
+        if (this.devPkgMemberAI.length > 0) //devPkgMember is not empty
+         {
+            for (let i = 0; i < this.devPkgMemberAI.length; i++) {
+                if (this.devPkgMemberAI[i].mac == dev.mac) //does devPkgMember contain device?
+                 {
+                    isContainDevice = true; //mark
+                    if (dev.seq == this.devPkgMemberAI[i].seq) //seq is the same
+                     {
+                        this.devPkgMemberAI[i].rxLightCount += 1;
+                        this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi }); //save rxLightInfo of device into deviceInfoArry 
+                        break; //break the loop
+                    }
+                    else if ((dev.seq > this.devPkgMemberAI[i].seq)) //dev.seq is laster than this.devPkgMember[i].seq
+                     {
+                        //update laster device information
+                        this.devPkgMemberAI[i].seq = dev.seq;
+                        this.devPkgMemberAI[i].mac = dev.mac;
+                        this.devPkgMemberAI[i].lid1 = dev.lid1;
+                        this.devPkgMemberAI[i].lid2 = dev.lid2;
+                        this.devPkgMemberAI[i].lid3 = dev.lid3;
+                        this.devPkgMemberAI[i].lid4 = dev.lid4;
+                        this.devPkgMemberAI[i].lid5 = dev.lid5;
+                        this.devPkgMemberAI[i].br1 = dev.br1;
+                        this.devPkgMemberAI[i].br2 = dev.br2;
+                        this.devPkgMemberAI[i].br3 = dev.br3;
+                        this.devPkgMemberAI[i].br4 = dev.br4;
+                        this.devPkgMemberAI[i].br5 = dev.br5;
+                        this.devPkgMemberAI[i].batPow = dev.batPow;
+                        this.devPkgMemberAI[i].label = dev.label;
+                        this.devPkgMemberAI[i].other = dev.other;
+                        this.devPkgMemberAI[i].rxLightCount = 1;
+                        this.devPkgMemberAI[i].rxLightInfo = [];
+                        this.devPkgMemberAI[i].rxLightInfo.length = 0; //clear former older information of rxLightInfo
+                        this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi }); //update laster rxLightInfo
+                        break; //break the loop
+                    }
+                    else if ((this.devPkgMemberAI[i].seq - dev.seq) > 250) {
+                        //update laster device information
+                        this.devPkgMemberAI[i].seq = dev.seq;
+                        this.devPkgMemberAI[i].mac = dev.mac;
+                        this.devPkgMemberAI[i].lid1 = dev.lid1;
+                        this.devPkgMemberAI[i].lid2 = dev.lid2;
+                        this.devPkgMemberAI[i].lid3 = dev.lid3;
+                        this.devPkgMemberAI[i].lid4 = dev.lid4;
+                        this.devPkgMemberAI[i].lid5 = dev.lid5;
+                        this.devPkgMemberAI[i].br1 = dev.br1;
+                        this.devPkgMemberAI[i].br2 = dev.br2;
+                        this.devPkgMemberAI[i].br3 = dev.br3;
+                        this.devPkgMemberAI[i].br4 = dev.br4;
+                        this.devPkgMemberAI[i].br5 = dev.br5;
+                        this.devPkgMemberAI[i].batPow = dev.batPow;
+                        this.devPkgMemberAI[i].label = dev.label;
+                        this.devPkgMemberAI[i].other = dev.other;
+                        this.devPkgMemberAI[i].rxLightCount = 1;
+                        this.devPkgMemberAI[i].rxLightInfo = [];
+                        this.devPkgMemberAI[i].rxLightInfo.length = 0; //clear former older information of rxLightInfo
+                        this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi }); //update laster rxLightInfo 
+                        break; //break the loop
+                    }
+                }
+            }
+            if (isContainDevice == false) //devPkgMember does not contain device
+             {
+                let devPkg = {};
+                devPkg.type = dev.type;
+                devPkg.seq = dev.seq;
+                devPkg.mac = dev.mac;
+                devPkg.lid1 = dev.lid1;
+                devPkg.lid2 = dev.lid2;
+                devPkg.lid3 = dev.lid3;
+                devPkg.lid4 = dev.lid4;
+                devPkg.lid5 = dev.lid5;
+                devPkg.br1 = dev.br1;
+                devPkg.br2 = dev.br2;
+                devPkg.br3 = dev.br3;
+                devPkg.br4 = dev.br4;
+                devPkg.br5 = dev.br5;
+                devPkg.batPow = dev.batPow;
+                devPkg.label = dev.label;
+                devPkg.other = dev.other;
+                devPkg.batPow = dev.batPow;
+                devPkg.other = dev.other;
+                devPkg.rxLightCount = 1;
+                devPkg.rxLightInfo = [];
+                let rxLightInfo = { recLightID: dev.recLightID, rssi: dev.rssi };
+                devPkg.rxLightInfo.push(rxLightInfo);
+                this.devPkgMemberAI.push(devPkg); //save devPkg into devPkgMember
+            }
+        }
+        else //devPkgMember is empty, 
+         {
+            let devPkg = {};
+            devPkg.type = dev.type;
+            devPkg.seq = dev.seq;
+            devPkg.mac = dev.mac;
+            devPkg.lid1 = dev.lid1;
+            devPkg.lid2 = dev.lid2;
+            devPkg.lid3 = dev.lid3;
+            devPkg.lid4 = dev.lid4;
+            devPkg.lid5 = dev.lid5;
+            devPkg.br1 = dev.br1;
+            devPkg.br2 = dev.br2;
+            devPkg.br3 = dev.br3;
+            devPkg.br4 = dev.br4;
+            devPkg.br5 = dev.br5;
+            devPkg.batPow = dev.batPow;
+            devPkg.label = dev.label;
+            devPkg.other = dev.other;
+            devPkg.rxLightCount = 1;
+            devPkg.rxLightInfo = [];
+            let rxLightInfo = { recLightID: dev.recLightID, rssi: dev.rssi };
+            devPkg.rxLightInfo.push(rxLightInfo);
+            this.devPkgMemberAI.push(devPkg); //save devPkg into devPkgMember
+        }
+    }
+    //----------------------------------------------------------------------------------
     //get device table
     sortDeviceTable(recLightID, num) {
         //let devInfo: iDevInfo[] = [];
@@ -981,6 +1252,17 @@ class ControlModbus {
             let dev = this.paserProtocol2Dev(recLightID, item); //parse device information
             //console.dir(dev)
             this.sortDev(dev); //sort dev by mac
+        });
+    }
+    //----------------------------------------------------------------------------------
+    //get device table
+    sortDeviceTableAI(recLightID, num) {
+        //let devInfo: iDevInfo[] = [];
+        // console.dir(num)
+        let matrix = this.getNumber2Uint8MatrixAI(num); //convert number to byte
+        matrix.forEach(item => {
+            let dev = this.paserProtocol2DevAI(recLightID, item); //parse device information
+            this.sortDevAI(dev); //sort dev by mac
         });
     }
     //-------------------------------------------------------------------------------

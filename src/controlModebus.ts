@@ -221,6 +221,18 @@ export class ControlModbus {
             console.log(this.getNowTime()+' Enable BLE')
             this.masterRs485.modbus_Master.setTimeout(1);
             await this.enBleReceive();
+            await this.delay(10);
+
+            console.log(this.getNowTime()+' Enable BLE')
+            this.masterRs485.modbus_Master.setTimeout(1);
+            await this.enBleReceive();
+            await this.delay(10);
+
+            console.log(this.getNowTime()+' Enable BLE')
+            this.masterRs485.modbus_Master.setTimeout(1);
+            await this.enBleReceive();
+            await this.delay(10);
+
            
             await this.delay(cyclePollingPeriod);
             this.runCmdProcess();//start polling driver and get location data
@@ -275,6 +287,7 @@ export class ControlModbus {
         }
         else
         {
+            console.log("AI mode")
             this.devPkgMemberAI.length = 0;//clear devPkgMember
             this.devPkgMemberAI = [];
             await this.pollingLocationInfoAI();//ask input register location data
@@ -282,9 +295,9 @@ export class ControlModbus {
        
         this.timeRunCmd = 10;
         // }
-        console.log(this.getNowTime()+' Enable BLE')
-        this.masterRs485.modbus_Master.setTimeout(1);
-        await this.enBleReceive();
+        //console.log(this.getNowTime()+' Enable BLE')
+        //this.masterRs485.modbus_Master.setTimeout(1);
+        //await this.enBleReceive();
         setTimeout(() => {
             this.runCmdProcess();
         }, cyclePollingPeriod);// this.pollingTime);
@@ -706,6 +719,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
         await this.delay(pollingTimeStep);//delay 5ms
         await this.readDevicePosition(this.drivers[i].lightID)//read device information,get register array
             .then((value) => {
+                //console.log("data")
                 //console.dir(value)
                 //parse array and sort device
                 this.sortDeviceTableAI(this.drivers[i].lightID, value);//get sort of device package array,devPkgMember
@@ -736,7 +750,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
 
             this.sendModbusMessage2Server(cmd);//sent device package to server 
             this.devPkgMemberAI.forEach(item => {
-                //console.dir(item);
+                console.dir(item);
             });
 
             resolve(true);
@@ -1418,10 +1432,12 @@ async pollingLocationInfoAI(): Promise<boolean> {
     //get device table
     sortDeviceTableAI(recLightID: number, num: number[]) {
         //let devInfo: iDevInfo[] = [];
+        // console.dir(num)
         let matrix: Uint8Array[] = this.getNumber2Uint8MatrixAI(num);//convert number to byte
+       
         matrix.forEach(item => {
             let dev: DTMODBUS.iDevInfoAI = this.paserProtocol2DevAI(recLightID, item);//parse device information
-            //console.dir(dev)
+           
             this.sortDevAI(dev);//sort dev by mac
         });
     }

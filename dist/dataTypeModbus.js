@@ -38,6 +38,11 @@ var deviceLength;
     deviceLength[deviceLength["tagLen"] = 24] = "tagLen";
     deviceLength[deviceLength["dripStandLen"] = 30] = "dripStandLen"; //bytes
 })(deviceLength = exports.deviceLength || (exports.deviceLength = {}));
+var deviceLengthAI;
+(function (deviceLengthAI) {
+    deviceLengthAI[deviceLengthAI["tagLen"] = 30] = "tagLen";
+    deviceLengthAI[deviceLengthAI["dripStandLen"] = 30] = "dripStandLen"; //bytes
+})(deviceLengthAI = exports.deviceLengthAI || (exports.deviceLengthAI = {}));
 var devAddress;
 (function (devAddress) {
     devAddress[devAddress["type"] = 0] = "type";
@@ -56,6 +61,25 @@ var devAddress;
     devAddress[devAddress["labelY"] = 21] = "labelY";
     devAddress[devAddress["labelH"] = 22] = "labelH";
 })(devAddress = exports.devAddress || (exports.devAddress = {}));
+var devAddressAI;
+(function (devAddressAI) {
+    devAddressAI[devAddressAI["type"] = 0] = "type";
+    devAddressAI[devAddressAI["seq"] = 1] = "seq";
+    devAddressAI[devAddressAI["Mac"] = 2] = "Mac";
+    devAddressAI[devAddressAI["lid1"] = 8] = "lid1";
+    devAddressAI[devAddressAI["lid2"] = 9] = "lid2";
+    devAddressAI[devAddressAI["lid3"] = 10] = "lid3";
+    devAddressAI[devAddressAI["lid4"] = 11] = "lid4";
+    devAddressAI[devAddressAI["lid5"] = 12] = "lid5";
+    devAddressAI[devAddressAI["br1"] = 13] = "br1";
+    devAddressAI[devAddressAI["br2"] = 15] = "br2";
+    devAddressAI[devAddressAI["br3"] = 17] = "br3";
+    devAddressAI[devAddressAI["br4"] = 19] = "br4";
+    devAddressAI[devAddressAI["br5"] = 21] = "br5";
+    devAddressAI[devAddressAI["rssi"] = 23] = "rssi";
+    devAddressAI[devAddressAI["batPow"] = 25] = "batPow";
+    devAddressAI[devAddressAI["label"] = 26] = "label";
+})(devAddressAI = exports.devAddressAI || (exports.devAddressAI = {}));
 var otherDripStandAddress;
 (function (otherDripStandAddress) {
     otherDripStandAddress[otherDripStandAddress["weight"] = 24] = "weight";
