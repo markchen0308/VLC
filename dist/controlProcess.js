@@ -16,12 +16,14 @@ var replyType;
     replyType[replyType["failSwitchOnOFF"] = 3] = "failSwitchOnOFF";
     replyType[replyType["failXY"] = 4] = "failXY";
     replyType[replyType["failNoDriver"] = 5] = "failNoDriver";
-    replyType[replyType["okBrightness"] = 6] = "okBrightness";
-    replyType[replyType["okCT"] = 7] = "okCT";
-    replyType[replyType["okSwitchOnOFF"] = 8] = "okSwitchOnOFF";
-    replyType[replyType["okXY"] = 9] = "okXY";
-    replyType[replyType["okReset"] = 10] = "okReset";
-    replyType[replyType["okQueryLocation"] = 11] = "okQueryLocation";
+    replyType[replyType["failDimCF"] = 6] = "failDimCF";
+    replyType[replyType["okBrightness"] = 7] = "okBrightness";
+    replyType[replyType["okCT"] = 8] = "okCT";
+    replyType[replyType["okSwitchOnOFF"] = 9] = "okSwitchOnOFF";
+    replyType[replyType["okXY"] = 10] = "okXY";
+    replyType[replyType["okReset"] = 11] = "okReset";
+    replyType[replyType["okQueryLocation"] = 12] = "okQueryLocation";
+    replyType[replyType["okDimCF"] = 13] = "okDimCF";
 })(replyType || (replyType = {}));
 class ControlProcess {
     constructor() {
@@ -185,6 +187,9 @@ class ControlProcess {
             case replyType.okXY:
                 webPkg.msg = "Dim XY ok";
                 break;
+            case replyType.okDimCF:
+                webPkg.msg = "Dimming CF ok";
+                break;
         }
         this.webServer.sendMessage(JSON.stringify(webPkg));
     }
@@ -211,6 +216,9 @@ class ControlProcess {
             case replyType.failNoDriver:
                 webPkg.msg = "There is no driver in the network.";
                 break;
+            case replyType.failDimCF:
+                webPkg.msg = "Dimming CF fail";
+                break;
         }
         this.webServer.sendMessage(JSON.stringify(webPkg));
     }
@@ -221,7 +229,7 @@ class ControlProcess {
         let cmdLightID = 0;
         let index = -1;
         //check control cmd's driver if exist
-        if ((cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingBrightness) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingCT) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingXY) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postSwitchOnOff) || cmd.cmdtype == dataTypeModbus_1.webCmd.getDriver) {
+        if ((cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingBrightness) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingCT) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingXY) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postCFMode) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postSwitchOnOff) || cmd.cmdtype == dataTypeModbus_1.webCmd.getDriver) {
             if (cmd.cmdData.driverId == 255) // all driver
              {
                 index = 255;
@@ -292,6 +300,16 @@ class ControlProcess {
                 else {
                     console.log('switchOnOff');
                     this.exeWebCmdPostSwitchOnOff(index, cmd);
+                }
+                break;
+            case dataTypeModbus_1.webCmd.postCFMode:
+                if (index == 255) {
+                    console.log('postCFMode  All');
+                    this.exeWebCmdPostCFModeAll(cmd);
+                }
+                else {
+                    this.exeWebCmdPostCFMode(index, cmd);
+                    console.log('postCFMode  ');
                 }
                 break;
         }
@@ -720,6 +738,21 @@ class ControlProcess {
         }
         else {
             this.replyWebseverFail(replyType.failSwitchOnOFF);
+        }
+    }
+    //----------------------------------------------------------------------------------------------------------
+    exeWebCmdPostCFModeAll(cmd) {
+        this.modbusServer.sendMessage(cmd); //sent to modbus
+        this.replyWebseverOk(replyType.okDimCF);
+    }
+    //---------------------------------------------------------------------------------------------------------
+    exeWebCmdPostCFMode(index, cmd) {
+        if (index >= 0) {
+            this.modbusServer.sendMessage(cmd); //sent to modbus
+            this.replyWebseverOk(replyType.okDimCF);
+        }
+        else {
+            this.replyWebseverFail(replyType.failDimCF);
         }
     }
     //----------------------------------------------------------------------------------

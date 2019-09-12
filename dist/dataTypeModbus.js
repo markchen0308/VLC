@@ -11,6 +11,7 @@ var holdingRegisterAddress;
     holdingRegisterAddress[holdingRegisterAddress["fBleRxEn"] = 6] = "fBleRxEn";
     holdingRegisterAddress[holdingRegisterAddress["onOff"] = 7] = "onOff";
     holdingRegisterAddress[holdingRegisterAddress["queryTime"] = 8] = "queryTime";
+    holdingRegisterAddress[holdingRegisterAddress["cfMode"] = 9] = "cfMode";
 })(holdingRegisterAddress = exports.holdingRegisterAddress || (exports.holdingRegisterAddress = {}));
 var holdingRegistersAddress;
 (function (holdingRegistersAddress) {
@@ -105,6 +106,7 @@ var webCmd;
     webCmd[webCmd["postDimingCT"] = 10] = "postDimingCT";
     webCmd[webCmd["postDimingXY"] = 11] = "postDimingXY";
     webCmd[webCmd["postSwitchOnOff"] = 12] = "postSwitchOnOff";
+    webCmd[webCmd["postCFMode"] = 13] = "postCFMode";
     webCmd[webCmd["msgError"] = 404] = "msgError";
 })(webCmd = exports.webCmd || (exports.webCmd = {}));
 var driverlightType;

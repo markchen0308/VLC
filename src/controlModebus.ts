@@ -176,6 +176,10 @@ export class ControlModbus {
             case webCmd.postSwitchOnOff:
                 this.cmdControlQueue.push(cmdtemp);//push to queue and wait for execution 
                 break;
+
+                case webCmd.postCFMode:
+                    this.cmdControlQueue.push(cmdtemp);//push to queue and wait for execution
+                    break; 
         }
     }
 
@@ -514,6 +518,34 @@ export class ControlModbus {
         });
     }
    
+      //---------------------------------------------------------------------------------------------------
+async DimCFAll(cfMode: number,br:number): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+        this.masterRs485.setSlaveID(0);
+        this.masterRs485.writeRegisters(holdingRegisterAddress.cfMode   ,   [cfMode, br])
+            .then((value) => {
+                resolve(true);//return data length
+            })
+            .catch((errorMsg) => {
+                reject(errorMsg);
+            })
+    });
+}
+
+
+    //------------------------------------------------------------------------------------------
+    async DimCF(cfMode: number, driverID: number,br:number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            this.masterRs485.setSlaveID(driverID);
+            this.masterRs485.writeRegisters(holdingRegisterAddress.cfMode,[ cfMode,br])
+                .then((value) => {
+                    resolve(value);//return data length
+                })
+                .catch((errMsg) => {
+                    reject(errMsg);
+                })
+        });
+    }
     //------------------------------------------------------------------------------------------
     async exeControlCmd(): Promise<boolean> {
         let cmd: DTCMD.iCmd;
@@ -581,6 +613,25 @@ export class ControlModbus {
                                 console.log(reason);
                             })
                         break;
+
+                        case webCmd.postCFMode:
+                            if(cmd.cmdData.cfMode==1)
+                            {
+                                console.log("All Light High CF ");
+                            }
+                            else if(cmd.cmdData.cfMode==2)
+                            {
+                                console.log("All Light Low CF ");
+                            }
+                            
+                            await this.DimCFAll(cmd.cmdData.cfMode, cmd.cmdData.brightness)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+                            
+                            break;
                 }
             }
             else {
@@ -635,6 +686,25 @@ export class ControlModbus {
                                     console.log(reason);
                                 })
                             break;
+
+                            case webCmd.postCFMode:
+                                if(cmd.cmdData.cfMode==1)
+                                {
+                                    console.log(" Dim Light" +cmdLightID+" High CF ");
+                                }
+                                else if(cmd.cmdData.cfMode==2)
+                                {
+                                    console.log(" Dim Light" +cmdLightID+" Low CF ");
+                                }
+
+                                await this.DimCF(cmd.cmdData.cfMode,cmdLightID, cmd.cmdData.brightness)
+                                .then((value) => {
+                                    console.log(value);
+                                }).catch((reason) => {
+                                    console.log(reason);
+                                })
+                                
+                                break;
                     }
                 }
 

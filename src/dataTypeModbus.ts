@@ -150,7 +150,8 @@ export enum holdingRegisterAddress {
     ckMax,
     fBleRxEn,
     onOff,
-    queryTime
+    queryTime,
+    cfMode
 }
 
 export enum holdingRegistersAddress {
@@ -248,6 +249,7 @@ export enum webCmd {
     postDimingCT,
     postDimingXY,
     postSwitchOnOff,
+    postCFMode,
     msgError=404
   }
 

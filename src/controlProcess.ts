@@ -22,14 +22,15 @@ enum replyType {
     failSwitchOnOFF,
     failXY,
     failNoDriver,
+    failDimCF,
     okBrightness,
     okCT,
     okSwitchOnOFF,
     okXY,
     okReset,
     okQueryLocation,
+    okDimCF
 }
-
 
 
 export class ControlProcess {
@@ -231,6 +232,10 @@ export class ControlProcess {
             case replyType.okXY:
                 webPkg.msg = "Dim XY ok";
                 break;
+            
+            case replyType.okDimCF:
+                 webPkg.msg = "Dimming CF ok";
+                break;
         }
 
         this.webServer.sendMessage(JSON.stringify(webPkg));
@@ -265,6 +270,10 @@ export class ControlProcess {
             case replyType.failNoDriver:
                 webPkg.msg = "There is no driver in the network.";
                 break;
+            
+            case replyType.failDimCF:
+                 webPkg.msg = "Dimming CF fail";
+                break;       
         }
 
         this.webServer.sendMessage(JSON.stringify(webPkg));
@@ -277,7 +286,7 @@ export class ControlProcess {
         let cmdLightID: number = 0;
         let index: number = -1;
         //check control cmd's driver if exist
-        if ((cmd.cmdtype == webCmd.postDimingBrightness) || (cmd.cmdtype == webCmd.postDimingCT) || (cmd.cmdtype == webCmd.postDimingXY) || (cmd.cmdtype == webCmd.postSwitchOnOff) || cmd.cmdtype == webCmd.getDriver) {
+        if ((cmd.cmdtype == webCmd.postDimingBrightness) || (cmd.cmdtype == webCmd.postDimingCT) || (cmd.cmdtype == webCmd.postDimingXY) ||(cmd.cmdtype == webCmd.postCFMode) || (cmd.cmdtype == webCmd.postSwitchOnOff) || cmd.cmdtype == webCmd.getDriver) {
 
             if (cmd.cmdData.driverId == 255) // all driver
             {
@@ -369,6 +378,20 @@ export class ControlProcess {
                     this.exeWebCmdPostSwitchOnOff(index, cmd);
                 }
                 break;
+
+            case webCmd.postCFMode:
+                    if(index ==255)
+                    {
+                        console.log('postCFMode  All')
+                        this.exeWebCmdPostCFModeAll(cmd);
+    
+                    }
+                    else
+                    {
+                       this.exeWebCmdPostCFMode(index,cmd);
+                        console.log('postCFMode  ')
+                    }
+                    break;
         }
     }
 
@@ -831,6 +854,23 @@ export class ControlProcess {
             this.replyWebseverFail(replyType.failSwitchOnOFF);
         }
     }
+
+        //----------------------------------------------------------------------------------------------------------
+        exeWebCmdPostCFModeAll(cmd: DTCMD.iCmd)
+        {
+            this.modbusServer.sendMessage(cmd);//sent to modbus
+            this.replyWebseverOk(replyType.okDimCF);
+        }
+        //---------------------------------------------------------------------------------------------------------
+        exeWebCmdPostCFMode(index: number, cmd: DTCMD.iCmd) {
+            if (index >= 0) {
+                this.modbusServer.sendMessage(cmd);//sent to modbus
+                this.replyWebseverOk(replyType.okDimCF);
+            }
+            else {
+                this.replyWebseverFail(replyType.failDimCF);
+            }
+        }
     //----------------------------------------------------------------------------------
     exeWebCmdPostDimTemperatureAll(cmd: DTCMD.iCmd) {
 

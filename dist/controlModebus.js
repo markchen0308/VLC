@@ -130,6 +130,9 @@ class ControlModbus {
             case dataTypeModbus_1.webCmd.postSwitchOnOff:
                 this.cmdControlQueue.push(cmdtemp); //push to queue and wait for execution 
                 break;
+            case dataTypeModbus_1.webCmd.postCFMode:
+                this.cmdControlQueue.push(cmdtemp); //push to queue and wait for execution
+                break;
         }
     }
     //-----------------------------------------------------------------------------
@@ -435,6 +438,32 @@ class ControlModbus {
             });
         });
     }
+    //---------------------------------------------------------------------------------------------------
+    async DimCFAll(cfMode, br) {
+        return new Promise((resolve, reject) => {
+            this.masterRs485.setSlaveID(0);
+            this.masterRs485.writeRegisters(dataTypeModbus_1.holdingRegisterAddress.cfMode, [cfMode, br])
+                .then((value) => {
+                resolve(true); //return data length
+            })
+                .catch((errorMsg) => {
+                reject(errorMsg);
+            });
+        });
+    }
+    //------------------------------------------------------------------------------------------
+    async DimCF(cfMode, driverID, br) {
+        return new Promise((resolve, reject) => {
+            this.masterRs485.setSlaveID(driverID);
+            this.masterRs485.writeRegisters(dataTypeModbus_1.holdingRegisterAddress.cfMode, [cfMode, br])
+                .then((value) => {
+                resolve(value); //return data length
+            })
+                .catch((errMsg) => {
+                reject(errMsg);
+            });
+        });
+    }
     //------------------------------------------------------------------------------------------
     async exeControlCmd() {
         let cmd;
@@ -490,6 +519,20 @@ class ControlModbus {
                             console.log(reason);
                         });
                         break;
+                    case dataTypeModbus_1.webCmd.postCFMode:
+                        if (cmd.cmdData.cfMode == 1) {
+                            console.log("All Light High CF ");
+                        }
+                        else if (cmd.cmdData.cfMode == 2) {
+                            console.log("All Light Low CF ");
+                        }
+                        await this.DimCFAll(cmd.cmdData.cfMode, cmd.cmdData.brightness)
+                            .then((value) => {
+                            console.log(value);
+                        }).catch((reason) => {
+                            console.log(reason);
+                        });
+                        break;
                 }
             }
             else {
@@ -532,6 +575,20 @@ class ControlModbus {
                                 console.log("switch off driver " + cmdLightID);
                             }
                             await this.switchOnOff(cmd.cmdData.switchOnOff, cmdLightID)
+                                .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            });
+                            break;
+                        case dataTypeModbus_1.webCmd.postCFMode:
+                            if (cmd.cmdData.cfMode == 1) {
+                                console.log(" Dim Light" + cmdLightID + " High CF ");
+                            }
+                            else if (cmd.cmdData.cfMode == 2) {
+                                console.log(" Dim Light" + cmdLightID + " Low CF ");
+                            }
+                            await this.DimCF(cmd.cmdData.cfMode, cmdLightID, cmd.cmdData.brightness)
                                 .then((value) => {
                                 console.log(value);
                             }).catch((reason) => {
