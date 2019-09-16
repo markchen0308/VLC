@@ -14,6 +14,7 @@ export interface iDriver {
     version?: number;
     bleEnable?:number;
     onOff?:number;
+    cf?:number;
 }
 
 
