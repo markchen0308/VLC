@@ -3,6 +3,8 @@
 import * as Net from 'net';//import socket module
 import * as DTCMD from './dataTypeCmd';
 
+import { TagTrigger } from './tagTrigger';
+
 let fs = require('fs');
 let configfilePath = './config.json';
 
@@ -12,6 +14,7 @@ import { holdingRegisterAddress, holdingRegistersAddress, inputregisterAddress, 
 
 import * as DTMODBUS from './dataTypeModbus';
 
+
 import { promises, lstat } from 'fs';
 import { resolve } from 'path';
 
@@ -20,13 +23,13 @@ let moment = require('moment');
 
 let timeFunctionInterval: number = 5;
 let maxLightIdKeep: number = 62;//max acount of light in a gw loop
-let pollingTimeStep: number = 10;//polling time per light
-let driverResPonseTimeout=5;
-let nextCmdDleayTime=1;
+let pollingTimeStep: number = 5;//polling time per light
+let driverResPonseTimeout = 5;
+let nextCmdDleayTime = 1;
 let limitHandshake: number = 3;//max. acount of handshakeing
-let scanPeriodSec:number=0.5  ;//sec
-let scanPeriodCount:number=scanPeriodSec/0.1;//convert second to counts
-let cyclePollingPeriod:number=600;
+let scanPeriodSec: number = 0.5;//sec
+let scanPeriodCount: number = scanPeriodSec / 0.1;//convert second to counts
+let cyclePollingPeriod: number = 650;
 
 enum modbusErr {
     errBleDead,
@@ -39,13 +42,11 @@ enum systemMode {
     AI_5fft
 }
 
-let sysmod=systemMode.AI_5fft;
+let sysmod = systemMode.AI_5fft;
 
 
 export class ControlModbus {
-
-    
-
+    //tagTrigger: TagTrigger;
     modbusClient: Net.Socket;
     modbusServerIP: string;
     modbusServerPort: number;
@@ -63,23 +64,49 @@ export class ControlModbus {
     fPollingEn: boolean;
     cmdControlQueue: DTCMD.iCmd[] = [];
     timeRunCmd: number = 10;
+    hrTime = process.hrtime();
 
     //-------------------------------------------------------------------------------
     constructor() {
+        //this.tagTrigger=new TagTrigger();
         this.process();
     }
-    
-    getNowTime():string{
-        let str:string=moment().format('YYYY-MM-DD hh:mm:ss') 
+    //------------------------------------------------------------------------------
+    getNowTime(): string {
+        let str: string = moment().format('YYYY-MM-DD hh:mm:ss')
         return str;
+    }
+    //------------------------------------------------------------------------------
+    getTimestamp(unit: string) {
+        const hrTime = process.hrtime();
+
+        switch (unit) {
+
+            case 'milli':
+                return hrTime[0] * 1000 + hrTime[1] / 1000000;
+
+            case 'micro':
+                return hrTime[0] * 1000000 + hrTime[1] / 1000;
+
+            case 'nano':
+                return hrTime[0] * 1000000000 + hrTime[1];
+
+            default:
+                return this.getTimestamp('nano');
+        }
     }
 
     //-------------------------------------------------------------------------------
     async process() {
         this.startModbusClient();//create modbus client and connect to modbus server
-
+        //this.tagTrigger = new TagTrigger();
         this.flagModbusStatus = await this.masterRs485.process();//open modbus
         await this.delay(1000);
+
+        //if (this.tagTrigger.isDeviceOk == false) {
+        //   console.log('tag uart  is not ready');
+        //    return;
+        //}
 
         if (this.flagServerStatus && this.flagModbusStatus)//server connected and modbus is ready
         {
@@ -177,9 +204,9 @@ export class ControlModbus {
                 this.cmdControlQueue.push(cmdtemp);//push to queue and wait for execution 
                 break;
 
-                case webCmd.postCFMode:
-                    this.cmdControlQueue.push(cmdtemp);//push to queue and wait for execution
-                    break; 
+            case webCmd.postCFMode:
+                this.cmdControlQueue.push(cmdtemp);//push to queue and wait for execution
+                break;
         }
     }
 
@@ -212,45 +239,60 @@ export class ControlModbus {
 
         if (this.drivers.length > 0) {
 
-            console.log("first setting ble scan time=" +scanPeriodSec + " second")
+            console.log("first setting ble scan time=" + scanPeriodSec + " second")
             await this.bleScanTime();
-            await this.delay(10);
-            console.log("second setting ble scan time=" +scanPeriodSec + " second")
+            await this.delay(5);
+            console.log("second setting ble scan time=" + scanPeriodSec + " second")
             await this.bleScanTime();
-            await this.delay(10);
-            console.log("Third setting ble scan time=" +scanPeriodSec + " second")
+            await this.delay(5);
+            console.log("Third setting ble scan time=" + scanPeriodSec + " second")
             await this.bleScanTime();
-            await this.delay(10);
-            
-            console.log(this.getNowTime()+' Enable BLE')
+            await this.delay(5);
+
+            // console.log(this.getNowTime() + ' Enable BLE')
+
             this.masterRs485.modbus_Master.setTimeout(1);
+            console.log("first setting ble scan time=" + scanPeriodSec + " second")
+            await this.enBleReceive();
+            await this.delay(10);
+            console.log("first setting ble scan time=" + scanPeriodSec + " second")
+
+            await this.enBleReceive();
+            await this.delay(10);
             await this.enBleReceive();
             await this.delay(10);
 
-            console.log(this.getNowTime()+' Enable BLE')
-            this.masterRs485.modbus_Master.setTimeout(1);
-            await this.enBleReceive();
-            await this.delay(10);
+            //  console.log(this.getNowTime() + ' Enable BLE')
+            //   this.masterRs485.modbus_Master.setTimeout(1);
+            //   await this.enBleReceive();
+            // await this.delay(10);
 
-            console.log(this.getNowTime()+' Enable BLE')
-            this.masterRs485.modbus_Master.setTimeout(1);
-            await this.enBleReceive();
-            await this.delay(10);
+            //    console.log(this.getNowTime() + ' Enable BLE')
+            //    this.masterRs485.modbus_Master.setTimeout(1);
+            //    await this.enBleReceive();
+            //    await this.delay(10);
 
-           
-            await this.delay(cyclePollingPeriod);
+
+            //  await this.delay(cyclePollingPeriod);
             this.runCmdProcess();//start polling driver and get location data
         }
     }
-
+    //--------------------------------------------------------------------------------
+    async enableBLE() {
+        console.log(this.getNowTime() + ' Enable BLE')
+        this.masterRs485.modbus_Master.setTimeout(1);
+        await this.enBleReceive();
+        await this.delay(5);
+    }
     //------------------------------------------------------------------------------------
     async runCmdProcess() {
 
         //this.timeRunCmd=10;
         //check if there is  command in command queue
+
         if (this.cmdControlQueue.length > 0) {
             await this.exeControlCmd();//execute cmd in queue
-            await this.delay(10);
+            await this.delay(5);
             //update driver infomation
             /* 
                 await this.updateExistNetworkLight()
@@ -275,29 +317,35 @@ export class ControlModbus {
 
         //if (this.fPollingEn == true)//allow polling
         //{
-        
+
 
 
 
         this.devPkgMember.length = 0;//clear devPkgMember
         this.devPkgMember = [];
-       
+
         this.masterRs485.modbus_Master.setTimeout(this.masterRs485.timeout);
-        if(sysmod==systemMode.none)
-        { 
+        if (sysmod == systemMode.none) {
             this.devPkgMember.length = 0;//clear devPkgMember
             this.devPkgMember = [];
             await this.pollingLocationInfo();//ask input register location data
         }
-        else
-        {
-            console.log("AI mode")
+        else {
+            //  console.log("AI mode")
             this.devPkgMemberAI.length = 0;//clear devPkgMember
             this.devPkgMemberAI = [];
+            //this.enableBLE();
+            //this.tagTrigger.writeUSBTriggle();
+
+            //let startTime=this.getTimestamp('milli');
             await this.pollingLocationInfoAI();//ask input register location data
+            //let endTime=this.getTimestamp('milli');
+
+            // let latencyTime:number=this.getTimestamp('milli')-startTime;
+            // console.log('latency='+latencyTime+'mSecond')
         }
-       
-        this.timeRunCmd = 10;
+
+        //this.timeRunCmd = 10;
         // }
         //console.log(this.getNowTime()+' Enable BLE')
         //this.masterRs485.modbus_Master.setTimeout(1);
@@ -350,24 +398,24 @@ export class ControlModbus {
                 })
         });
     }
-        //--------------------------------------------------------------------------------------------
-        async bleScanTime(): Promise<boolean> {
-            // for (let i = 0; i < this.drivers.length; i++) {
-            //     console.log("enable ble receive of light " + this.drivers[i].lightID);
-            //     await this.delay(pollingTimeStep);//delay 5ms
-            await this.setBleScanTime(scanPeriodCount)//broadcast read device information,get register array,            await this.setBlefBleRxEn(this.drivers[i].lightID)//read device information,get register array
-                .then((value) => {
-                    console.log(value);
-    
-                })
-                .catch((err) => {
-                    console.log(err);
-                })
-            return new Promise<boolean>((resolve, reject) => {
-                resolve(true);
+    //--------------------------------------------------------------------------------------------
+    async bleScanTime(): Promise<boolean> {
+        // for (let i = 0; i < this.drivers.length; i++) {
+        //     console.log("enable ble receive of light " + this.drivers[i].lightID);
+        //     await this.delay(pollingTimeStep);//delay 5ms
+        await this.setBleScanTime(scanPeriodCount)//broadcast read device information,get register array,            await this.setBlefBleRxEn(this.drivers[i].lightID)//read device information,get register array
+            .then((value) => {
+                console.log(value);
+
             })
-        }
-            //---------------------------------------------------------------------------------------
+            .catch((err) => {
+                console.log(err);
+            })
+        return new Promise<boolean>((resolve, reject) => {
+            resolve(true);
+        })
+    }
+    //---------------------------------------------------------------------------------------
     //set ble scan time
     setBleScanTime(period: number): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
@@ -410,13 +458,13 @@ export class ControlModbus {
                 })
         });
     }
-   //-----------------------------------------------------------------------------------------
-   async setAllBrightness( brightness: number): Promise<boolean> {
-    let flag: boolean = false;
-    //for (let i: number = 0; i < this.drivers.length; i++) {
+    //-----------------------------------------------------------------------------------------
+    async setAllBrightness(brightness: number): Promise<boolean> {
+        let flag: boolean = false;
+        //for (let i: number = 0; i < this.drivers.length; i++) {
         //this.masterRs485.setSlaveID(this.drivers[i].lightID);
         this.masterRs485.setSlaveID(0);
-        await this.masterRs485.writeSingleRegister(holdingRegisterAddress.brightness ,brightness)
+        await this.masterRs485.writeSingleRegister(holdingRegisterAddress.brightness, brightness)
             .then((value) => {
                 flag = true;
                 console.dir(value);//return data length
@@ -425,17 +473,17 @@ export class ControlModbus {
                 flag = false;
                 console.dir(errMsg);
             })
-       // await this.delay(pollingTimeStep);
-   // }
-    return new Promise<boolean>((resolve, reject) => {
-        if (flag == true) {
-            resolve(true)
-        }
-        else {
-            reject(false);
-        }
-    })
-}
+        // await this.delay(pollingTimeStep);
+        // }
+        return new Promise<boolean>((resolve, reject) => {
+            if (flag == true) {
+                resolve(true)
+            }
+            else {
+                reject(false);
+            }
+        })
+    }
 
     //---------------------------------------------------------------------------------------
     async cmdDimBrightness(lid: number, brightness: number) {
@@ -452,19 +500,19 @@ export class ControlModbus {
     async setCT_All(ck: number, br: number): Promise<boolean> {
         let flag: boolean = false;
         //for (let i: number = 0; i < this.drivers.length; i++) {
-            //this.masterRs485.setSlaveID(this.drivers[i].lightID);
-            this.masterRs485.setSlaveID(0);
-            await this.masterRs485.writeRegisters(holdingRegistersAddress.ck, [br, ck])
-                .then((value) => {
-                    flag = true;
-                    console.dir(value);//return data length
-                })
-                .catch((errMsg) => {
-                    flag = false;
-                    console.dir(errMsg);
-                })
-            //await this.delay(pollingTimeStep);
-       // }
+        //this.masterRs485.setSlaveID(this.drivers[i].lightID);
+        this.masterRs485.setSlaveID(0);
+        await this.masterRs485.writeRegisters(holdingRegistersAddress.ck, [br, ck])
+            .then((value) => {
+                flag = true;
+                console.dir(value);//return data length
+            })
+            .catch((errMsg) => {
+                flag = false;
+                console.dir(errMsg);
+            })
+        //await this.delay(pollingTimeStep);
+        // }
         return new Promise<boolean>((resolve, reject) => {
             if (flag == true) {
                 resolve(true)
@@ -517,27 +565,27 @@ export class ControlModbus {
                 })
         });
     }
-   
-      //---------------------------------------------------------------------------------------------------
-async DimCFAll(cfMode: number,br:number): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-        this.masterRs485.setSlaveID(0);
-        this.masterRs485.writeRegisters(holdingRegisterAddress.cfMode   ,   [cfMode, br])
-            .then((value) => {
-                resolve(true);//return data length
-            })
-            .catch((errorMsg) => {
-                reject(errorMsg);
-            })
-    });
-}
+
+    //---------------------------------------------------------------------------------------------------
+    async DimCFAll(cfMode: number, br: number): Promise<boolean> {
+        return new Promise<boolean>((resolve, reject) => {
+            this.masterRs485.setSlaveID(0);
+            this.masterRs485.writeRegisters(holdingRegisterAddress.cfMode, [cfMode, br])
+                .then((value) => {
+                    resolve(true);//return data length
+                })
+                .catch((errorMsg) => {
+                    reject(errorMsg);
+                })
+        });
+    }
 
 
     //------------------------------------------------------------------------------------------
-    async DimCF(cfMode: number, driverID: number,br:number): Promise<number[]> {
+    async DimCF(cfMode: number, driverID: number, br: number): Promise<number[]> {
         return new Promise<number[]>((resolve, reject) => {
             this.masterRs485.setSlaveID(driverID);
-            this.masterRs485.writeRegisters(holdingRegisterAddress.cfMode,[ cfMode,br])
+            this.masterRs485.writeRegisters(holdingRegisterAddress.cfMode, [cfMode, br])
                 .then((value) => {
                     resolve(value);//return data length
                 })
@@ -559,11 +607,14 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
         let driver: iDriver;
         let lightType: driverlightType;
 
-        for (let i: number = 0; i < len; i++) {
+/*
+        while (this.cmdControlQueue.length > 0) {
+            this.cmdControlQueue.shift()
+
 
             //check driver id match cmd driver
 
-            cmd = this.cmdControlQueue[i];
+            cmd = this.cmdControlQueue.shift();//get first item and remove it
             cmdLightID = cmd.cmdData.driverId;
             //console.dir(cmd.cmdData.driverId);
             if (cmdLightID == 255) {//group control
@@ -572,16 +623,16 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
 
                     case webCmd.postDimingBrightness:
                         console.log("dim all brightness")
-                        await this.setAllBrightness(cmd.cmdData.brightness)                            
-                        .then((value) => {
-                            console.log(value);
-                        }).catch((reason) => {
-                            console.log(reason);
-                        })
-                    break;
+                        await this.setAllBrightness(cmd.cmdData.brightness)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+                        break;
 
 
-               
+
                     case webCmd.postDimingCT:
                         console.log("dim all ct");
                         await this.setCT_All(cmd.cmdData.CT, cmd.cmdData.brightness)
@@ -614,24 +665,22 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
                             })
                         break;
 
-                        case webCmd.postCFMode:
-                            if(cmd.cmdData.cfMode==1)
-                            {
-                                console.log("All Light High CF ");
-                            }
-                            else if(cmd.cmdData.cfMode==2)
-                            {
-                                console.log("All Light Low CF ");
-                            }
-                            
-                            await this.DimCFAll(cmd.cmdData.cfMode, cmd.cmdData.brightness)
+                    case webCmd.postCFMode:
+                        if (cmd.cmdData.cfMode == 1) {
+                            console.log("All  High CF ");
+                        }
+                        else if (cmd.cmdData.cfMode == 2) {
+                            console.log("All  Low CF ");
+                        }
+
+                        await this.DimCFAll(cmd.cmdData.cfMode, cmd.cmdData.brightness)
                             .then((value) => {
                                 console.log(value);
                             }).catch((reason) => {
                                 console.log(reason);
                             })
-                            
-                            break;
+
+                        break;
                 }
             }
             else {
@@ -687,43 +736,188 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
                                 })
                             break;
 
-                            case webCmd.postCFMode:
-                                if(cmd.cmdData.cfMode==1)
-                                {
-                                    console.log(" Dim Light" +cmdLightID+" High CF ");
-                                }
-                                else if(cmd.cmdData.cfMode==2)
-                                {
-                                    console.log(" Dim Light" +cmdLightID+" Low CF ");
-                                }
+                        case webCmd.postCFMode:
+                            if (cmd.cmdData.cfMode == 1) {
+                                console.log(" Dim Light" + cmdLightID + " High CF ");
+                            }
+                            else if (cmd.cmdData.cfMode == 2) {
+                                console.log(" Dim Light" + cmdLightID + " Low CF ");
+                            }
 
-                                await this.DimCF(cmd.cmdData.cfMode,cmdLightID, cmd.cmdData.brightness)
+                            await this.DimCF(cmd.cmdData.cfMode, cmdLightID, cmd.cmdData.brightness)
+                                .then((value) => {
+                                    console.log('dim cf');
+                                    console.log(value);
+                                }).catch((reason) => {
+                                    console.log(reason);
+                                })
+
+                            break;
+                    }
+                }
+            }
+        }
+*/
+
+
+
+
+        
+       for (let i: number = 0; i < len; i++) {
+
+            //check driver id match cmd driver
+
+            cmd = this.cmdControlQueue[i];
+            cmdLightID = cmd.cmdData.driverId;
+            //console.dir(cmd.cmdData.driverId);
+            if (cmdLightID == 255) {//group control
+
+                switch (cmd.cmdtype) {
+
+                    case webCmd.postDimingBrightness:
+                        console.log("dim all brightness")
+                        await this.setAllBrightness(cmd.cmdData.brightness)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+                        break;
+
+
+
+                    case webCmd.postDimingCT:
+                        console.log("dim all ct");
+                        await this.setCT_All(cmd.cmdData.CT, cmd.cmdData.brightness)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+
+                        break;
+
+                    case webCmd.postDimingXY:
+                        //let cmdDimingXY: DTCMD.iColorXY = cmd.cmdData;
+                        //this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
+                        break;
+
+                    case webCmd.postSwitchOnOff:
+
+                        if (cmd.cmdData.switchOnOff) {
+                            console.log("switch on all");
+                        } else {
+                            console.log("switch off all");
+                        }
+
+                        await this.switchOnOffAll(cmd.cmdData.switchOnOff)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+                        break;
+
+                    case webCmd.postCFMode:
+                        if (cmd.cmdData.cfMode == 1) {
+                            console.log("All Light High CF ");
+                        }
+                        else if (cmd.cmdData.cfMode == 2) {
+                            console.log("All Light Low CF ");
+                        }
+
+                        await this.DimCFAll(cmd.cmdData.cfMode, cmd.cmdData.brightness)
+                            .then((value) => {
+                                console.log(value);
+                            }).catch((reason) => {
+                                console.log(reason);
+                            })
+
+                        break;
+                }
+            }
+            else {
+                //Is id exist
+                for (let j: number = 0; j < this.drivers.length; j++) {
+                    if (cmd.cmdData.driverId == this.drivers[j].lightID) {
+                        cmdLightID = this.drivers[j].lightID;
+                        break;
+                    }
+                }
+
+                if (cmdLightID > 0)// driver id match cmd driver
+                {
+                    switch (cmd.cmdtype) {
+
+                        case webCmd.postDimingBrightness:
+
+                            await this.setBrightness(cmdLightID, cmd.cmdData.brightness)
                                 .then((value) => {
                                     console.log(value);
                                 }).catch((reason) => {
                                     console.log(reason);
                                 })
-                                
-                                break;
+
+                            break;
+
+                        case webCmd.postDimingCT:
+                            console.log("dim ct " + cmdLightID);
+                            await this.setCT(cmdLightID, cmd.cmdData.CT, cmd.cmdData.brightness)
+                                .then((value) => {
+                                    console.log(value);
+                                }).catch((reason) => {
+                                    console.log(reason);
+                                })
+                            break;
+
+                        case webCmd.postDimingXY:
+                            //let cmdDimingXY: DTCMD.iColorXY = cmd.cmdData;
+                            //this.exeWebCmdPostDimColoXY(cmdDimingXY.brightness, cmdDimingXY.driverID, cmdDimingXY.colorX, cmdDimingXY.colorY);
+                            break;
+
+                        case webCmd.postSwitchOnOff:
+                            if (cmd.cmdData.switchOnOff) {
+                                console.log("switch on driver " + cmdLightID);
+                            } else {
+                                console.log("switch off driver " + cmdLightID);
+                            }
+                            await this.switchOnOff(cmd.cmdData.switchOnOff, cmdLightID)
+                                .then((value) => {
+                                    console.log(value);
+                                }).catch((reason) => {
+                                    console.log(reason);
+                                })
+                            break;
+
+                        case webCmd.postCFMode:
+                            if (cmd.cmdData.cfMode == 1) {
+                                console.log(" Dim Light" + cmdLightID + " High CF ");
+                            }
+                            else if (cmd.cmdData.cfMode == 2) {
+                                console.log(" Dim Light" + cmdLightID + " Low CF ");
+                            }
+
+                            await this.DimCF(cmd.cmdData.cfMode, cmdLightID, cmd.cmdData.brightness)
+                                .then((value) => {
+                                    console.log('dim cf');
+                                    console.log(value);
+                                }).catch((reason) => {
+                                    console.log(reason);
+                                })
+
+                            break;
                     }
                 }
-
             }
-
-
-
-
-
-
         }
 
 
         //remove cmd in queue
 
-        for (let i: number = 0; i < len; i++) {
-            this.cmdControlQueue.shift();//remove first item
-        }
-        this.cmdControlQueue.length = 0;
+       for (let i: number = 0; i < len; i++) {
+           this.cmdControlQueue.shift();//remove first item
+       }
+       this.cmdControlQueue.length = 0;
 
 
         return new Promise<boolean>((resolve, reject) => {
@@ -733,7 +927,7 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
     }
     //-------------------------------------------------------------------------------------
     async pollingLocationInfo(): Promise<boolean> {
-        console.log(this.getNowTime()+' Polling Network.');
+        console.log(this.getNowTime() + ' Polling Network.');
         for (let i = 0; i < this.drivers.length; i++) {
 
             await this.delay(pollingTimeStep);//delay 5ms
@@ -745,7 +939,7 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
                 })
                 .catch((err) => {
                     if (err == modbusErr.errBleDead) {
-                        console.log(this.getNowTime()+' Ble Is Dead!');
+                        console.log(this.getNowTime() + ' Ble Is Dead!');
                     }
                     else if (err != modbusErr.errLenZero) {
                         console.log(err);
@@ -781,57 +975,98 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
         })
 
     }
-//-------------------------------------------------------------------------------------
-async pollingLocationInfoAI(): Promise<boolean> {
-    console.log(this.getNowTime()+' Polling Network.');
-    for (let i = 0; i < this.drivers.length; i++) {
+    //-------------------------------------------------------------------------------------
+    async pollingLocationInfoAI(): Promise<boolean> {
+        console.log(this.getNowTime() + ' Polling Network.');
+        this.masterRs485.modbus_Master.setTimeout(650);
+        await this.delay(2);//delay 5ms
+        for (let i = 0; i < this.drivers.length; i++) {
 
-        await this.delay(pollingTimeStep);//delay 5ms
-        await this.readDevicePosition(this.drivers[i].lightID)//read device information,get register array
-            .then((value) => {
-                //console.log("data")
-                //console.dir(value)
-                //parse array and sort device
-                this.sortDeviceTableAI(this.drivers[i].lightID, value);//get sort of device package array,devPkgMember
-            })
-            .catch((err) => {
-                if (err == modbusErr.errBleDead) {
-                    console.log(this.getNowTime()+' Ble Is Dead!');
-                }
-                else if (err != modbusErr.errLenZero) {
-                    console.log(err);
-                }
 
-                //console.log(err);//print error/len=0/ble is dead
-            })
+
+            await this.readDevicePosition2(this.drivers[i].lightID)//read device information,get register array
+                .then((value) => {
+                    //console.log("data")
+                    console.dir(value)
+                    if (value[0] > 0) //remove first element
+                    {
+                        value.shift();
+                        this.sortDeviceTableAI(this.drivers[i].lightID, value);//get sort of device package array,devPkgMember
+
+                    }
+                    //parse array and sort device
+                    // console.log("test");
+                    //this.sortDeviceTableAI(this.drivers[i].lightID, value);//get sort of device package array,devPkgMember
+                })
+                .catch((err) => {
+                    if (err == modbusErr.errBleDead) {
+                        console.log(this.getNowTime() + ' Ble Is Dead!');
+                    }
+                    else if (err != modbusErr.errLenZero) {
+                        console.log(err);
+                    }
+
+                    //console.log(err);//print error/len=0/ble is dead
+                })
+        }
+
+
+        return new Promise<boolean>((resolve, reject) => {
+
+            if (this.devPkgMemberAI.length > 0) {
+                //write to server
+                let cmd: DTCMD.iCmd =
+                {
+                    cmdtype: modbusCmd.location,
+                    cmdData: this.devPkgMemberAI
+                }
+                //send location information to controlprocess
+
+
+
+                this.sendModbusMessage2Server(cmd);//sent device package to server 
+                this.devPkgMemberAI.forEach(item => {
+                    console.dir(item);
+                });
+
+                resolve(true);
+            }
+            else {
+                resolve(false);
+            }
+
+        })
+
     }
 
+    //----------------------------------------------------------------------------------
+    //read readable  number of register
+    getReadableNumber2(id: number): Promise<number[]> {
+        return new Promise<number[]>((resolve, reject) => {
+            let len: number;
+            this.masterRs485.setSlaveID(id);
+            let readCount: number = 1;
 
-    return new Promise<boolean>((resolve, reject) => {
+            this.masterRs485.readInputRegisters(inputregisterAddress.countReadableRegister, 16)
+                .then((value) => {
 
-        if (this.devPkgMemberAI.length > 0) {
-            //write to server
-            let cmd: DTCMD.iCmd =
-            {
-                cmdtype: modbusCmd.location,
-                cmdData: this.devPkgMemberAI
-            }
-            //send location information to controlprocess
+                    if (value[0] >= 0) {
+                        // console.log("len="+len)
+                        resolve(value);//return data length
+                    }
+                    else {
+                        reject(modbusErr.errLenZero);
+                    }
 
-            this.sendModbusMessage2Server(cmd);//sent device package to server 
-            this.devPkgMemberAI.forEach(item => {
-                console.dir(item);
-            });
+                })
+                .catch((errorMsg) => {
 
-            resolve(true);
-        }
-        else {
-            resolve(false);
-        }
+                    // console.log("len get error=" + errorMsg);
+                    reject(errorMsg);
+                })
+        });
+    }
 
-    })
-
-}
     //----------------------------------------------------------------------------------
     //read readable  number of register
     getReadableNumber(id: number): Promise<number> {
@@ -840,13 +1075,12 @@ async pollingLocationInfoAI(): Promise<boolean> {
             this.masterRs485.setSlaveID(id);
             let readCount: number = 1;
 
-            this.masterRs485.readInputRegisters(inputregisterAddress.countReadableRegister, readCount)
+            this.masterRs485.readInputRegisters(inputregisterAddress.countReadableRegister, 16)
                 .then((value) => {
 
-                    len = value[0];//record data length
-                    if (len >= 0) {
+                    if (value[0] >= 0) {
                         // console.log("len="+len)
-                        resolve(len);//return data length
+                        resolve(value[0]);//return data length
                     }
                     else {
                         reject(modbusErr.errLenZero);
@@ -880,6 +1114,56 @@ async pollingLocationInfoAI(): Promise<boolean> {
                 })
         });
     }
+
+    //------------------------------------------------------------------------
+    //read device register of light
+    async readDevicePosition2(lightID: number): Promise<number[]> {
+        let registerLen: number;
+        return new Promise<number[]>((resolve, reject) => {
+            //read length
+            this.getReadableNumber2(lightID)
+                .then((value) => {//get byte length
+                    console.log('len=' + value[0])
+
+                    resolve(value)
+                    /*
+                                        if ((value > 0) && (value < 255))//length>0
+                                        {
+                                            registerLen = value / 2;//register length=byte length /2
+                    
+                                            setTimeout(() => {
+                                            //read device location data after timeFunctionInterval,return register array
+                                            this.getDevicRegisterData(lightID, registerLen)
+                                                .then((value) => {
+                                                    //console.log('val')
+                                                    //console.log(value)
+                                                    resolve(value);
+                                                })
+                                                .catch((errorMsg) => {
+                    
+                                                    reject(errorMsg);
+                                                })
+                                             }, 1);//timeFunctionInterval
+                    
+                                        }
+                                        else {
+                                            if (value == 0) {
+                                                reject(modbusErr.errLenZero);
+                                            }
+                                            else {
+                                                reject(modbusErr.errBleDead);
+                                            }
+                    
+                                            //     
+                                        }
+                                    */
+                })
+                .catch((errorMsg) => {
+
+                    reject(errorMsg);
+                })
+        });
+    }
     //------------------------------------------------------------------------
     //read device register of light
     async readDevicePosition(lightID: number): Promise<number[]> {
@@ -888,13 +1172,13 @@ async pollingLocationInfoAI(): Promise<boolean> {
             //read length
             this.getReadableNumber(lightID)
                 .then((value) => {//get byte length
-                    console.log('len='+value)
-                    
+                    console.log('len=' + value)
+
                     if ((value > 0) && (value < 255))//length>0
                     {
                         registerLen = value / 2;//register length=byte length /2
-                      
-                       // setTimeout(() => {
+
+                        setTimeout(() => {
                             //read device location data after timeFunctionInterval,return register array
                             this.getDevicRegisterData(lightID, registerLen)
                                 .then((value) => {
@@ -903,10 +1187,10 @@ async pollingLocationInfoAI(): Promise<boolean> {
                                     resolve(value);
                                 })
                                 .catch((errorMsg) => {
-                                    
+
                                     reject(errorMsg);
                                 })
-                       // }, 10);//timeFunctionInterval
+                        }, 1);//timeFunctionInterval
 
                     }
                     else {
@@ -933,7 +1217,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
         let driversKeep: iDriver[] = [];
         let id = 0;
         let handshakeCount: number = 0;
-        let flagFounddDriver:boolean=false;
+        let flagFounddDriver: boolean = false;
         for (let i: number = 0; i < maxLightIdKeep; i++) {
             id += 1;
             for (let j: number = 1; j <= limitHandshake; j++) {
@@ -946,29 +1230,26 @@ async pollingLocationInfoAI(): Promise<boolean> {
 
                 await this.getLightInformation(id)
                     .then((value) => {//value is driverInfo
-                        console.log('Driver ' + id.toString() + ' was found' );
-                        flagFounddDriver=true;
+                        console.log('Driver ' + id.toString() + ' was found');
+                        flagFounddDriver = true;
                         driversKeep.push(value);//save driver
-                        
+
                     })
                     .catch((errorMsg) => {
                         console.log('Driver ' + id + ' response error : ' + errorMsg);
-                        flagFounddDriver=false;
+                        flagFounddDriver = false;
                     });
-                
-                if(flagFounddDriver)
-                {
-                    flagFounddDriver=false;
+
+                if (flagFounddDriver) {
+                    flagFounddDriver = false;
                     break;//jump out for loop and find next driver
                 }
-                else
-                {
-                    if(j >= limitHandshake)
-                    {
+                else {
+                    if (j >= limitHandshake) {
                         break;//jump out for loop and find next driver
                     }
                     await this.delay(nextCmdDleayTime);//read next light after 5msec
-                }   
+                }
             }
         }
 
@@ -983,7 +1264,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
         let id: number = 0;
         let driverIDs: number[] = [];
         let handshakeCount: number = 0;
-        let flagFounddDriver:boolean=false;
+        let flagFounddDriver: boolean = false;
         //backup driver ID
         this.drivers.forEach(driver => {
             driverIDs.push(driver.lightID);
@@ -1001,29 +1282,26 @@ async pollingLocationInfoAI(): Promise<boolean> {
 
                 await this.getLightInformation(id)
                     .then((value) => {//value is driverInfo
-                        console.log('Driver ' + id.toString() + ' was found' );
-                        flagFounddDriver=true;
+                        console.log('Driver ' + id.toString() + ' was found');
+                        flagFounddDriver = true;
                         driversKeep.push(value);//save driver
-                        
+
                     })
                     .catch((errorMsg) => {
                         console.log('Driver ' + id + ' response error : ' + errorMsg);
-                        flagFounddDriver=false;
+                        flagFounddDriver = false;
                     });
-                
-                if(flagFounddDriver)
-                {
-                    flagFounddDriver=false;
+
+                if (flagFounddDriver) {
+                    flagFounddDriver = false;
                     break;//jump out for loop and find next driver
                 }
-                else
-                {
-                    if(j >= limitHandshake)
-                    {
+                else {
+                    if (j >= limitHandshake) {
                         break;//jump out for loop and find next driver
                     }
                     await this.delay(nextCmdDleayTime);//read next light after 5msec
-                }   
+                }
             }
         }
 
@@ -1366,9 +1644,10 @@ async pollingLocationInfoAI(): Promise<boolean> {
         }
     }
     //----------------------------------------------------------------------------------
-       //group device by device mac
-       sortDevAI(dev: DTMODBUS.iDevInfoAI) {
+    //group device by device mac
+    sortDevAI(dev: DTMODBUS.iDevInfoAI) {
         let isContainDevice: boolean = false;
+        console.log('sortAI')
         if (this.devPkgMemberAI.length > 0) //devPkgMember is not empty
         {
             for (let i: number = 0; i < this.devPkgMemberAI.length; i++) {
@@ -1428,7 +1707,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
                         this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi }); //update laster rxLightInfo 
                         break;//break the loop
                     }
-                  
+
 
                 }
             }
@@ -1498,16 +1777,16 @@ async pollingLocationInfoAI(): Promise<boolean> {
             this.sortDev(dev);//sort dev by mac
         });
     }
-        //----------------------------------------------------------------------------------
+    //----------------------------------------------------------------------------------
     //get device table
     sortDeviceTableAI(recLightID: number, num: number[]) {
         //let devInfo: iDevInfo[] = [];
         // console.dir(num)
         let matrix: Uint8Array[] = this.getNumber2Uint8MatrixAI(num);//convert number to byte
-       
+
         matrix.forEach(item => {
             let dev: DTMODBUS.iDevInfoAI = this.paserProtocol2DevAI(recLightID, item);//parse device information
-           
+
             this.sortDevAI(dev);//sort dev by mac
         });
     }

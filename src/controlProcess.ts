@@ -144,27 +144,14 @@ export class ControlProcess {
                     devPkgMember: devPkg
                 }
 
-                if (this.remoteClient.isRemoteServerHolding() ==true)//is remote server was connected
+                if (this.remoteClient.isRemoteServerHolding() == true)//is remote server was connected
                 {
                     let webPkg: iWebPkg = {};
-                    /*let gwInfoList: iGwInf[] = [];
-                    gwInfoList.push(gwInf);
-                    let gwPkg: iGwPkg = {
-                        GatewaySeqMin: gwInfoList[0].GatewaySeq,
-                        GatewaySeqMax: gwInfoList[0].GatewaySeq,
-                        DateTimeMin: gwInfoList[0].Datetime,
-                        DateTimeMax: gwInfoList[0].Datetime,
-                        GatewayHistoryCount: 1,
-                        GatewayHistoryMember: gwInfoList
-                    };*/
-                    webPkg.reply=1;
-                    webPkg.msg=gwInf;
-                 //   console.log("parepare data to socket server:")
-                  //  console.log(webPkg)
+                    webPkg.reply = 1;
+                    webPkg.msg = gwInf;
                     this.remoteClient.sendMsg2Server(JSON.stringify(webPkg));
                 }
-                else
-                {
+                else {
 
                 }
                 // console.dir(gwInf);//show 
@@ -180,7 +167,6 @@ export class ControlProcess {
     //get the gateway network ip and mac
     getNetworkInformation(): Promise<boolean> {
         return new Promise<boolean>((resolve, reject) => {
-
             network.get_active_interface((err, obj) => {
                 if (Boolean(obj) == true) {
                     this.GwIP = obj.ip_address;
@@ -193,7 +179,6 @@ export class ControlProcess {
                     reject(false);
                 }
             });
-
         });
     }
     //------------------------------------------------------------------
@@ -202,7 +187,6 @@ export class ControlProcess {
             this.latestNGwInf.shift();//remove fisrt item and return it.
         }
         this.latestNGwInf.push(gwInf);//save data
-
     }
     //-----------------------------------------------------------------------
     getLastGwInfData(): iGwInf {
@@ -232,9 +216,9 @@ export class ControlProcess {
             case replyType.okXY:
                 webPkg.msg = "Dim XY ok";
                 break;
-            
+
             case replyType.okDimCF:
-                 webPkg.msg = "Dimming CF ok";
+                webPkg.msg = "Dimming CF ok";
                 break;
         }
 
@@ -270,10 +254,10 @@ export class ControlProcess {
             case replyType.failNoDriver:
                 webPkg.msg = "There is no driver in the network.";
                 break;
-            
+
             case replyType.failDimCF:
-                 webPkg.msg = "Dimming CF fail";
-                break;       
+                webPkg.msg = "Dimming CF fail";
+                break;
         }
 
         this.webServer.sendMessage(JSON.stringify(webPkg));
@@ -286,23 +270,36 @@ export class ControlProcess {
         let cmdLightID: number = 0;
         let index: number = -1;
         //check control cmd's driver if exist
-        if ((cmd.cmdtype == webCmd.postDimingBrightness) || (cmd.cmdtype == webCmd.postDimingCT) || (cmd.cmdtype == webCmd.postDimingXY) ||(cmd.cmdtype == webCmd.postCFMode) || (cmd.cmdtype == webCmd.postSwitchOnOff) || cmd.cmdtype == webCmd.getDriver) {
 
-            if (cmd.cmdData.driverId == 255) // all driver
-            {
-                index = 255;
-            }
-            else {// find out driver number index
-                for (let j: number = 0; j < this.drivers.length; j++) {
-                    if (cmd.cmdData.driverId == this.drivers[j].lightID) {
-                        index = j;
-                        //console.log("index=" + index);
+        switch (cmd.cmdtype) {
+            case webCmd.postDimingBrightness:
+            case webCmd.postDimingCT:
+            case webCmd.postDimingXY:
+            case webCmd.postCFMode:
+            case webCmd.postSwitchOnOff:
+            case webCmd.getDriver:
+                {
+                    if (cmd.cmdData.driverId == 255) // all driver
+                    {
+                        index = 255;
+                    }
+                    else {// find out driver number index
+                        for (let j: number = 0; j < this.drivers.length; j++) {
+                            if (cmd.cmdData.driverId == this.drivers[j].lightID) {
+                                index = j;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                default:
+                    {
                         break;
                     }
-                }
-            }
-
         }
+
 
         switch (cmd.cmdtype) {
             case webCmd.getTodaylast://get today last data
@@ -345,27 +342,24 @@ export class ControlProcess {
                     this.exeWebCmdPostBrightnessAll(cmd);
                 }
                 else {
-                    
+
                     this.exeWebCmdPostBrightness(index, cmd);
                 }
                 break;
 
             case webCmd.postDimingCT:
-                
+
                 if (index == 255) {
                     this.exeWebCmdPostDimTemperatureAll(cmd);
                 }
                 else {
-                    
+
                     this.exeWebCmdPostDimTemperature(index, cmd);
                 }
-
-                // this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
                 break;
 
             case webCmd.postDimingXY:
                 this.exeWebCmdPostDimColoXY(index, cmd);
-
                 break;
 
             case webCmd.postSwitchOnOff:
@@ -380,18 +374,16 @@ export class ControlProcess {
                 break;
 
             case webCmd.postCFMode:
-                    if(index ==255)
-                    {
-                        console.log('postCFMode  All')
-                        this.exeWebCmdPostCFModeAll(cmd);
-    
-                    }
-                    else
-                    {
-                       this.exeWebCmdPostCFMode(index,cmd);
-                        console.log('postCFMode  ')
-                    }
-                    break;
+                if (index == 255) {
+                    console.log('postCFMode  All')
+                    this.exeWebCmdPostCFModeAll(cmd);
+
+                }
+                else {
+                    this.exeWebCmdPostCFMode(index, cmd);
+                    console.log('postCFMode  ')
+                }
+                break;
         }
     }
 
@@ -666,24 +658,6 @@ export class ControlProcess {
             if (index == 255)//query all
             {
                 let webPkg: iWebPkg = {};
-                /*
-                console.log(255)
-                this.modbusServer.sendMessage(cmd);//sent to modbus
-               
-                let driver:iDriver={
-                    brightness:50,
-                    lightType:1,
-                    ck:5000,
-                    brightnessMin:20,
-                    brightnessMax:100,
-                    ckMin:3000,
-                    ckMax:5500,
-                    lightID:1,
-                    Mac:'12:34:56:78:90:AB',
-                    manufactureID:0,
-                    version:1,
-                    bleEnable:0
-                } */
                 let drivers = this.drivers;
                 webPkg.reply = 1;
                 webPkg.msg = drivers;
@@ -693,25 +667,7 @@ export class ControlProcess {
             else if (index >= 0)//query a light
             {
                 let driver = this.drivers[index];
-
                 let webPkg: iWebPkg = {};
-                /*
-                //test data
-                let driver:iDriver={
-                    brightness:50,
-                    lightType:1,
-                    ck:5000,
-                    brightnessMin:20,
-                    brightnessMax:100,
-                    ckMin:3000,
-                    ckMax:5500,
-                    lightID:1,
-                    Mac:'12:34:56:78:90:AB',
-                    manufactureID:0,
-                    version:1,
-                    bleEnable:0
-                } 
-                 */  
                 webPkg.reply = 1;
                 webPkg.msg = driver;
                 let webMsg: string = JSON.stringify(webPkg);//encrypt
@@ -725,15 +681,12 @@ export class ControlProcess {
         else {//there is no driver in the netwrok
             this.replyWebseverFail(replyType.failNoDriver);//response no driver
         }
-
     }
     //---------------------------------------------------------------------------------
     replyWebCmdSetRemoteServer(cmd: DTCMD.iCmd) {
-    
         let webPkg: iWebPkg = {};
 
         if (this.remoteClient.isRemoteServerHolding() == false) {
-         
             let ip: string = cmd.cmdData.serverIP;
             let port: number = cmd.cmdData.serverPort;
             webPkg.reply = 1;
@@ -749,20 +702,19 @@ export class ControlProcess {
             webPkg.msg = msg;
             this.webServer.sendMessage(JSON.stringify(webPkg));
         }
-
     }
     //---------------------------------------------------------------------------------
     exeWebCmdPostReset() {
-
+        console.log('dim  reset');
         let cmd: DTCMD.iCmd;
         this.modbusServer.sendMessage(cmd);
         this.replyWebseverOk(replyType.okReset);
     }
     //-----------------------------------------------------------------------------------
     exeWebCmdPostBrightness(index: number, cmd: DTCMD.iCmd) {
-        console.log('get exeWebCmdPostBrightness')
         if (index >= 0) {
-           if ((cmd.cmdData.brightness >= this.drivers[index].brightnessMin) && (cmd.cmdData.brightness <= this.drivers[index].brightnessMax)) {
+             console.log('dim  bright');
+            if ((cmd.cmdData.brightness >= this.drivers[index].brightnessMin) && (cmd.cmdData.brightness <= this.drivers[index].brightnessMax)) {
                 this.modbusServer.sendMessage(cmd);//sent to modbus
                 this.replyWebseverOk(replyType.okBrightness);
             }
@@ -776,7 +728,7 @@ export class ControlProcess {
     }
     //-----------------------------------------------------------------------------------
     exeWebCmdPostBrightnessAll(cmd: DTCMD.iCmd) {
-        console.log('dim all bright')
+        console.log('dim all bright');
         let flag: boolean = true;
         for (let index: number = 0; index < this.drivers.length; index++) {
             if ((cmd.cmdData.brightness < this.drivers[index].brightnessMin) || (cmd.cmdData.brightness > this.drivers[index].brightnessMax)) {
@@ -795,11 +747,7 @@ export class ControlProcess {
     }
     //-----------------------------------------------------------------------------------
     exeWebCmdPostDimTemperature(index: number, cmd: DTCMD.iCmd) {
-
-        console.dir(cmd.cmdData.brightness)
-        console.dir(cmd.cmdData.driverId)
-        console.dir(cmd.cmdData.CT)
-
+        console.log('dim Temperature')
         let brightness: number = cmd.cmdData.brightness;
         let driverID: number = cmd.cmdData.driverId;
         let CT: number = cmd.cmdData.CT;
@@ -810,7 +758,7 @@ export class ControlProcess {
                     this.modbusServer.sendMessage(cmd);//sent to modbus
                     this.replyWebseverOk(replyType.okCT);
                 }
-                else { 
+                else {
                     this.replyWebseverFail(replyType.failCT);
                 }
             }
@@ -837,12 +785,13 @@ export class ControlProcess {
     }
     //----------------------------------------------------------------------------------
     exeWebCmdPostSwitchOnOffAll(cmd: DTCMD.iCmd) {
+        console.log('on off  all light')
         this.modbusServer.sendMessage(cmd);//sent to modbus
         this.replyWebseverOk(replyType.okSwitchOnOFF);
     }
     //----------------------------------------------------------------------------------------------------------
     exeWebCmdPostSwitchOnOff(index: number, cmd: DTCMD.iCmd) {
-
+        console.log('on off  light')
         let switchOnOff: number = cmd.cmdData.switchOnOff;
         let driverID: number = cmd.cmdData.driverId;
 
@@ -855,22 +804,25 @@ export class ControlProcess {
         }
     }
 
-        //----------------------------------------------------------------------------------------------------------
-        exeWebCmdPostCFModeAll(cmd: DTCMD.iCmd)
-        {
+    //----------------------------------------------------------------------------------------------------------
+    exeWebCmdPostCFModeAll(cmd: DTCMD.iCmd) {
+        console.log('dim all CF ')
+        this.modbusServer.sendMessage(cmd);//sent to modbus
+        this.replyWebseverOk(replyType.okDimCF);
+    }
+    //---------------------------------------------------------------------------------------------------------
+    exeWebCmdPostCFMode(index: number, cmd: DTCMD.iCmd) {
+        
+        if (index >= 0) {
+            console.log('dim  CF ok')
             this.modbusServer.sendMessage(cmd);//sent to modbus
             this.replyWebseverOk(replyType.okDimCF);
         }
-        //---------------------------------------------------------------------------------------------------------
-        exeWebCmdPostCFMode(index: number, cmd: DTCMD.iCmd) {
-            if (index >= 0) {
-                this.modbusServer.sendMessage(cmd);//sent to modbus
-                this.replyWebseverOk(replyType.okDimCF);
-            }
-            else {
-                this.replyWebseverFail(replyType.failDimCF);
-            }
+        else {
+            console.log('dim  CF unsuccessfully')
+            this.replyWebseverFail(replyType.failDimCF);
         }
+    }
     //----------------------------------------------------------------------------------
     exeWebCmdPostDimTemperatureAll(cmd: DTCMD.iCmd) {
 
