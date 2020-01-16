@@ -344,7 +344,7 @@ export class ControlModbus {
             // let latencyTime:number=this.getTimestamp('milli')-startTime;
             // console.log('latency='+latencyTime+'mSecond')
         }
-
+    
         //this.timeRunCmd = 10;
         // }
         //console.log(this.getNowTime()+' Enable BLE')
