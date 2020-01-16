@@ -93,7 +93,7 @@ export class ControlProcess {
             });
         });
     }
-
+ 
     //-----------------------------------------------------------------------------------------------------------------
     async listenModbusServer() {
         this.modbusServer.socketModbusServer.on("connection", (socket) => {
