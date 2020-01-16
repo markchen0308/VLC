@@ -114,20 +114,8 @@ class ControlProcess {
                 if (this.remoteClient.isRemoteServerHolding() == true) //is remote server was connected
                  {
                     let webPkg = {};
-                    /*let gwInfoList: iGwInf[] = [];
-                    gwInfoList.push(gwInf);
-                    let gwPkg: iGwPkg = {
-                        GatewaySeqMin: gwInfoList[0].GatewaySeq,
-                        GatewaySeqMax: gwInfoList[0].GatewaySeq,
-                        DateTimeMin: gwInfoList[0].Datetime,
-                        DateTimeMax: gwInfoList[0].Datetime,
-                        GatewayHistoryCount: 1,
-                        GatewayHistoryMember: gwInfoList
-                    };*/
                     webPkg.reply = 1;
                     webPkg.msg = gwInf;
-                    //   console.log("parepare data to socket server:")
-                    //  console.log(webPkg)
                     this.remoteClient.sendMsg2Server(JSON.stringify(webPkg));
                 }
                 else {
@@ -229,20 +217,32 @@ class ControlProcess {
         let cmdLightID = 0;
         let index = -1;
         //check control cmd's driver if exist
-        if ((cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingBrightness) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingCT) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postDimingXY) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postCFMode) || (cmd.cmdtype == dataTypeModbus_1.webCmd.postSwitchOnOff) || cmd.cmdtype == dataTypeModbus_1.webCmd.getDriver) {
-            if (cmd.cmdData.driverId == 255) // all driver
-             {
-                index = 255;
-            }
-            else { // find out driver number index
-                for (let j = 0; j < this.drivers.length; j++) {
-                    if (cmd.cmdData.driverId == this.drivers[j].lightID) {
-                        index = j;
-                        //console.log("index=" + index);
-                        break;
+        switch (cmd.cmdtype) {
+            case dataTypeModbus_1.webCmd.postDimingBrightness:
+            case dataTypeModbus_1.webCmd.postDimingCT:
+            case dataTypeModbus_1.webCmd.postDimingXY:
+            case dataTypeModbus_1.webCmd.postCFMode:
+            case dataTypeModbus_1.webCmd.postSwitchOnOff:
+            case dataTypeModbus_1.webCmd.getDriver:
+                {
+                    if (cmd.cmdData.driverId == 255) // all driver
+                     {
+                        index = 255;
                     }
+                    else { // find out driver number index
+                        for (let j = 0; j < this.drivers.length; j++) {
+                            if (cmd.cmdData.driverId == this.drivers[j].lightID) {
+                                index = j;
+                                break;
+                            }
+                        }
+                    }
+                    break;
                 }
-            }
+            default:
+                {
+                    break;
+                }
         }
         switch (cmd.cmdtype) {
             case dataTypeModbus_1.webCmd.getTodaylast: //get today last data
@@ -287,7 +287,6 @@ class ControlProcess {
                 else {
                     this.exeWebCmdPostDimTemperature(index, cmd);
                 }
-                // this.exeWebCmdPostDimTemperature(cmdDimingCT.brightness, cmdDimingCT.driverID, cmdDimingCT.CT);
                 break;
             case dataTypeModbus_1.webCmd.postDimingXY:
                 this.exeWebCmdPostDimColoXY(index, cmd);
@@ -570,24 +569,6 @@ class ControlProcess {
             if (index == 255) //query all
              {
                 let webPkg = {};
-                /*
-                console.log(255)
-                this.modbusServer.sendMessage(cmd);//sent to modbus
-               
-                let driver:iDriver={
-                    brightness:50,
-                    lightType:1,
-                    ck:5000,
-                    brightnessMin:20,
-                    brightnessMax:100,
-                    ckMin:3000,
-                    ckMax:5500,
-                    lightID:1,
-                    Mac:'12:34:56:78:90:AB',
-                    manufactureID:0,
-                    version:1,
-                    bleEnable:0
-                } */
                 let drivers = this.drivers;
                 webPkg.reply = 1;
                 webPkg.msg = drivers;
@@ -598,23 +579,6 @@ class ControlProcess {
              {
                 let driver = this.drivers[index];
                 let webPkg = {};
-                /*
-                //test data
-                let driver:iDriver={
-                    brightness:50,
-                    lightType:1,
-                    ck:5000,
-                    brightnessMin:20,
-                    brightnessMax:100,
-                    ckMin:3000,
-                    ckMax:5500,
-                    lightID:1,
-                    Mac:'12:34:56:78:90:AB',
-                    manufactureID:0,
-                    version:1,
-                    bleEnable:0
-                }
-                 */
                 webPkg.reply = 1;
                 webPkg.msg = driver;
                 let webMsg = JSON.stringify(webPkg); //encrypt
@@ -650,14 +614,15 @@ class ControlProcess {
     }
     //---------------------------------------------------------------------------------
     exeWebCmdPostReset() {
+        console.log('dim  reset');
         let cmd;
         this.modbusServer.sendMessage(cmd);
         this.replyWebseverOk(replyType.okReset);
     }
     //-----------------------------------------------------------------------------------
     exeWebCmdPostBrightness(index, cmd) {
-        console.log('get exeWebCmdPostBrightness');
         if (index >= 0) {
+            console.log('dim  bright');
             if ((cmd.cmdData.brightness >= this.drivers[index].brightnessMin) && (cmd.cmdData.brightness <= this.drivers[index].brightnessMax)) {
                 this.modbusServer.sendMessage(cmd); //sent to modbus
                 this.replyWebseverOk(replyType.okBrightness);
@@ -690,9 +655,7 @@ class ControlProcess {
     }
     //-----------------------------------------------------------------------------------
     exeWebCmdPostDimTemperature(index, cmd) {
-        console.dir(cmd.cmdData.brightness);
-        console.dir(cmd.cmdData.driverId);
-        console.dir(cmd.cmdData.CT);
+        console.log('dim Temperature');
         let brightness = cmd.cmdData.brightness;
         let driverID = cmd.cmdData.driverId;
         let CT = cmd.cmdData.CT;
@@ -725,11 +688,13 @@ class ControlProcess {
     }
     //----------------------------------------------------------------------------------
     exeWebCmdPostSwitchOnOffAll(cmd) {
+        console.log('on off  all light');
         this.modbusServer.sendMessage(cmd); //sent to modbus
         this.replyWebseverOk(replyType.okSwitchOnOFF);
     }
     //----------------------------------------------------------------------------------------------------------
     exeWebCmdPostSwitchOnOff(index, cmd) {
+        console.log('on off  light');
         let switchOnOff = cmd.cmdData.switchOnOff;
         let driverID = cmd.cmdData.driverId;
         if (index >= 0) {
@@ -742,16 +707,19 @@ class ControlProcess {
     }
     //----------------------------------------------------------------------------------------------------------
     exeWebCmdPostCFModeAll(cmd) {
+        console.log('dim all CF ');
         this.modbusServer.sendMessage(cmd); //sent to modbus
         this.replyWebseverOk(replyType.okDimCF);
     }
     //---------------------------------------------------------------------------------------------------------
     exeWebCmdPostCFMode(index, cmd) {
         if (index >= 0) {
+            console.log('dim  CF ok');
             this.modbusServer.sendMessage(cmd); //sent to modbus
             this.replyWebseverOk(replyType.okDimCF);
         }
         else {
+            console.log('dim  CF unsuccessfully');
             this.replyWebseverFail(replyType.failDimCF);
         }
     }
