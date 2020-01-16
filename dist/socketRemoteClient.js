@@ -9,6 +9,7 @@ class SocketRemoteClient {
         this.socketRemoteClient = null;
         this.socket = null;
         this.flagServerStatus = false;
+        this.flagTest = false;
     }
     setClientSeverInfo(ip, port) {
         this.socketRemoteServerIP = ip;
@@ -38,7 +39,12 @@ class SocketRemoteClient {
             this.flagServerStatus = true;
             // received server cmd data \
             this.socketRemoteClient.on('data', (data) => {
-                console.log('Get remote server data:' + data);
+                if (this.flagTest == true) {
+                    this.timeEnd = this.getTimestamp();
+                    this.deltaTime = this.timeStart - this.timeEnd;
+                    this.flagTest = false;
+                    console.log("latency= " + this.deltaTime + " ms");
+                }
             });
             //this.socketRemoteClient.setEncoding('utf8');
             this.socketRemoteClient.on('close', () => {
@@ -59,7 +65,13 @@ class SocketRemoteClient {
     //-----------------------------------------------------------------------------------
     sendMsg2Server(msg) {
         //console.log("sent msg")
+        this.flagTest = true;
+        this.timeStart = this.getTimestamp();
         this.socketRemoteClient.write(msg);
+    }
+    getTimestamp() {
+        const hrTime = process.hrtime();
+        return hrTime[0] * 1000 + hrTime[1] / 1000000;
     }
 }
 exports.SocketRemoteClient = SocketRemoteClient;

@@ -8,6 +8,10 @@ export class SocketRemoteClient {
     socketRemoteServerPort: number;
     socketRemoteServerIP: string;
     flagServerStatus: boolean = false;
+    flagTest:boolean=false;
+    timeStart:number;
+    timeEnd:number;
+    deltaTime:number;
 
 
     constructor() {
@@ -50,7 +54,14 @@ export class SocketRemoteClient {
 
             // received server cmd data \
             this.socketRemoteClient.on('data', (data) => {
-                console.log('Get remote server data:' + data)
+                if(this.flagTest==true)
+                {
+                    this.timeEnd=this.getTimestamp();
+                    this.deltaTime=this.timeStart-this.timeEnd;
+                    this.flagTest=false;
+                    console.log("latency= "+this.deltaTime+" ms");
+                }
+
             });
 
             //this.socketRemoteClient.setEncoding('utf8');
@@ -77,7 +88,16 @@ export class SocketRemoteClient {
     sendMsg2Server(msg: string)//sent cmd data to server
     {
         //console.log("sent msg")
+        this.flagTest=true;
+
+        this.timeStart=this.getTimestamp();
         this.socketRemoteClient.write(msg);
+    }
+
+    getTimestamp():number
+    {
+        const hrTime=process.hrtime();
+        return hrTime[0]*1000+hrTime[1]/1000000; 
     }
 
 }

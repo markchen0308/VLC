@@ -233,6 +233,10 @@ class ControlModbus {
         //console.log(this.getNowTime()+' Enable BLE')
         //this.masterRs485.modbus_Master.setTimeout(1);
         //await this.enBleReceive();
+        console.log(this.getNowTime() + ' Enable BLE');
+        this.masterRs485.modbus_Master.setTimeout(1);
+        await this.enBleReceive();
+        await this.delay(10);
         setTimeout(() => {
             this.runCmdProcess();
         }, cyclePollingPeriod); // this.pollingTime);
@@ -590,6 +594,7 @@ class ControlModbus {
                             }
                             await this.DimCF(cmd.cmdData.cfMode, cmdLightID, cmd.cmdData.brightness)
                                 .then((value) => {
+                                console.log('dim cf');
                                 console.log(value);
                             }).catch((reason) => {
                                 console.log(reason);
