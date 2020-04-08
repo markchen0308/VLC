@@ -54,6 +54,8 @@ export class ControlModbus {
     drivers: iDriver[] = [];
     devPkgMember: iDevPkg[] = [];
     devPkgMemberAI: DTMODBUS.iDevPkgAI[] = [];
+    devPkgMemberAI_last: DTMODBUS.iDevPkgAI[] = [];
+
     pollingTime: number = 1000;
 
     flagServerStatus: boolean = false;
@@ -277,14 +279,10 @@ export class ControlModbus {
         //{
         
 
-
-
-        this.devPkgMember.length = 0;//clear devPkgMember
-        this.devPkgMember = [];
-       
         this.masterRs485.modbus_Master.setTimeout(this.masterRs485.timeout);
         if(sysmod==systemMode.none)
         { 
+            console.log("not AI mode")
             this.devPkgMember.length = 0;//clear devPkgMember
             this.devPkgMember = [];
             await this.pollingLocationInfo();//ask input register location data
@@ -292,16 +290,27 @@ export class ControlModbus {
         else
         {
             console.log("AI mode")
+            //clone devPkgMemberAI to devPkgMemberAI_last
+            if(this.devPkgMemberAI.length >0)
+            {
+                this.devPkgMemberAI_last=[]    //clear 
+                this.devPkgMemberAI_last.length=0;
+                this.devPkgMemberAI_last=JSON.parse(JSON.stringify(this.devPkgMemberAI));//clone
+            }
+            else
+            {
+                this.devPkgMemberAI_last=[]   //clear 
+                this.devPkgMemberAI_last.length=0;
+            }
+
             this.devPkgMemberAI.length = 0;//clear devPkgMember
             this.devPkgMemberAI = [];
+
             await this.pollingLocationInfoAI();//ask input register location data
         }
        
         this.timeRunCmd = 10;
-        // }
-        //console.log(this.getNowTime()+' Enable BLE')
-        //this.masterRs485.modbus_Master.setTimeout(1);
-        //await this.enBleReceive();
+
         console.log(this.getNowTime()+' Enable BLE')
         this.masterRs485.modbus_Master.setTimeout(1);
         await this.enBleReceive();
@@ -1375,20 +1384,37 @@ async pollingLocationInfoAI(): Promise<boolean> {
        //group device by device mac
        sortDevAI(dev: DTMODBUS.iDevInfoAI) {
         let isContainDevice: boolean = false;
+        
+        //find out if item is in older package.  if yes , delete it  
+        if(this.devPkgMemberAI_last.length >0)
+        {
+            for (let i: number = 0; i < this.devPkgMemberAI_last.length; i++) 
+            {
+                if (this.devPkgMemberAI_last[i].mac == dev.mac) //does devPkgMemberAI_last contain device?
+                {
+                    if ( this.devPkgMemberAI_last[i].seq==dev.seq)//seq is the same
+                    {
+                        return ;
+                    }
+                }
+            }
+        }
+
         if (this.devPkgMemberAI.length > 0) //devPkgMember is not empty
         {
             for (let i: number = 0; i < this.devPkgMemberAI.length; i++) {
                 if (this.devPkgMemberAI[i].mac == dev.mac) //does devPkgMember contain device?
                 {
-                    isContainDevice = true;//mark
                     if (dev.seq == this.devPkgMemberAI[i].seq)//seq is the same
                     {
+                        isContainDevice = true;//mark
                         this.devPkgMemberAI[i].rxLightCount += 1;
                         this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi });//save rxLightInfo of device into deviceInfoArry 
                         break;//break the loop
                     }
                     else if ((dev.seq > this.devPkgMemberAI[i].seq))//dev.seq is laster than this.devPkgMember[i].seq
                     {
+                        isContainDevice = true;//mark
                         //update laster device information
                         this.devPkgMemberAI[i].seq = dev.seq;
                         this.devPkgMemberAI[i].mac = dev.mac;
