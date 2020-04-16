@@ -68,7 +68,7 @@ export class ControlModbus {
 
     //-------------------------------------------------------------------------------
     constructor() {
-        this.process();
+        this.process();//start  run the programe
     }
     
     getNowTime():string{
@@ -81,12 +81,12 @@ export class ControlModbus {
         this.startModbusClient();//create modbus client and connect to modbus server
 
         this.flagModbusStatus = await this.masterRs485.process();//open modbus
-        await this.delay(1000);
+        await this.delay(1000);//wait modbus to be stable
 
         if (this.flagServerStatus && this.flagModbusStatus)//server connected and modbus is ready
         {
             console.log('start modbus process');
-            this.systemRun();
+            this.systemRun();//build network
         }
         else {
             if (this.flagServerStatus == false) {
@@ -186,11 +186,12 @@ export class ControlModbus {
     }
 
     //-----------------------------------------------------------------------------
-    //run system 
+    //build network 
     async systemRun() {
-        //get information of drivers on network
+
+        //start to search   drivers on network
         await this.getNetworkLightNumber()
-            .then((value) => {
+            .then((value) => { //return driver list :iDriver
                 if (value.length > 0) {
                     this.drivers = value;
                     let cmd: DTCMD.iCmd =
@@ -246,6 +247,7 @@ export class ControlModbus {
     }
 
     //------------------------------------------------------------------------------------
+    //polling the network
     async runCmdProcess() {
 
         //this.timeRunCmd=10;
@@ -253,41 +255,20 @@ export class ControlModbus {
         if (this.cmdControlQueue.length > 0) {
             await this.exeControlCmd();//execute cmd in queue
             await this.delay(10);
-            //update driver infomation
-            /* 
-                await this.updateExistNetworkLight()
-                .then((value) => {
-                    if (value.length > 0) {
-                        this.drivers = value;
-                        let cmd: DTCMD.iCmd =
-                        {
-                            cmdtype: modbusCmd.driverInfo,
-                            cmdData: this.drivers
-                        }
-                        //send driver status to controprocess
-                        this.sendModbusMessage2Server(cmd);//sent driver information to server
-                    }
-                    else {
-                        this.drivers.length = 0;
-                        console.log("no device");
-                    }
-                });
-            */
+        
         }
 
-        //if (this.fPollingEn == true)//allow polling
-        //{
-        
 
         this.masterRs485.modbus_Master.setTimeout(this.masterRs485.timeout);
-        if(sysmod==systemMode.none)
+
+        if(sysmod==systemMode.none) //non AI
         { 
             console.log("not AI mode")
             this.devPkgMember.length = 0;//clear devPkgMember
             this.devPkgMember = [];
             await this.pollingLocationInfo();//ask input register location data
         }
-        else
+        else //AI
         {
             console.log("AI mode")
             //clone devPkgMemberAI to devPkgMemberAI_last
@@ -306,7 +287,7 @@ export class ControlModbus {
             this.devPkgMemberAI.length = 0;//clear devPkgMember
             this.devPkgMemberAI = [];
 
-            await this.pollingLocationInfoAI();//ask input register location data
+            await this.pollingLocationInfoAI();//start to polling network
         }
        
         this.timeRunCmd = 10;
@@ -722,14 +703,7 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
                                 break;
                     }
                 }
-
             }
-
-
-
-
-
-
         }
 
 
@@ -798,7 +772,7 @@ async DimCFAll(cfMode: number,br:number): Promise<boolean> {
     }
 //-------------------------------------------------------------------------------------
 async pollingLocationInfoAI(): Promise<boolean> {
-    console.log(this.getNowTime()+' Polling Network.');
+    console.log(this.getNowTime()+'  Polling Network.');
     for (let i = 0; i < this.drivers.length; i++) {
 
         await this.delay(pollingTimeStep);//delay 5ms
@@ -807,14 +781,24 @@ async pollingLocationInfoAI(): Promise<boolean> {
                 //console.log("data")
                 //console.dir(value)
                 //parse array and sort device
-                this.sortDeviceTableAI(this.drivers[i].lightID, value);//get sort of device package array,devPkgMember
+
+                if ( this.drivers[i].lastNetworkQueryStatus==true)
+                {
+                    this.sortDeviceTableAI(this.drivers[i].lightID, value);//get sort of device package array,devPkgMember
+                }
+                else{//drop the driver data because the last time error 
+                    this.drivers[i].lastNetworkQueryStatus=true
+                }
+                
             })
             .catch((err) => {
                 if (err == modbusErr.errBleDead) {
                     console.log(this.getNowTime()+' Ble Is Dead!');
+                    this.drivers[i].lastNetworkQueryStatus=false
                 }
                 else if (err != modbusErr.errLenZero) {
                     console.log(err);
+                    this.drivers[i].lastNetworkQueryStatus=false
                 }
 
                 //console.log(err);//print error/len=0/ble is dead
@@ -943,7 +927,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
         });
     }
     //-------------------------------------------------------------------
-    //get exist light driver on the network
+    //search  light driver on the network
     async getNetworkLightNumber(): Promise<iDriver[]> {
         let driversKeep: iDriver[] = [];
         let id = 0;
@@ -963,6 +947,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
                     .then((value) => {//value is driverInfo
                         console.log('Driver ' + id.toString() + ' was found' );
                         flagFounddDriver=true;
+                        value.lastNetworkQueryStatus=true//set the light is ok
                         driversKeep.push(value);//save driver
                         
                     })
@@ -986,7 +971,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
                 }   
             }
         }
-
+        //end of search 
         return new Promise<iDriver[]>((resolve, reject) => {
             resolve(driversKeep);
         });
@@ -1399,22 +1384,23 @@ async pollingLocationInfoAI(): Promise<boolean> {
                 }
             }
         }
+        isContainDevice = false;//mark
 
         if (this.devPkgMemberAI.length > 0) //devPkgMember is not empty
         {
             for (let i: number = 0; i < this.devPkgMemberAI.length; i++) {
                 if (this.devPkgMemberAI[i].mac == dev.mac) //does devPkgMember contain device?
                 {
+                    isContainDevice = true;//mark
+
                     if (dev.seq == this.devPkgMemberAI[i].seq)//seq is the same
                     {
-                        isContainDevice = true;//mark
                         this.devPkgMemberAI[i].rxLightCount += 1;
                         this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi });//save rxLightInfo of device into deviceInfoArry 
                         break;//break the loop
                     }
-                    else if ((dev.seq > this.devPkgMemberAI[i].seq))//dev.seq is laster than this.devPkgMember[i].seq
+                    else if ((dev.seq > this.devPkgMemberAI[i].seq) &&((dev.seq - this.devPkgMemberAI[i].seq)<127 ))//dev.seq is laster than this.devPkgMember[i].seq
                     {
-                        isContainDevice = true;//mark
                         //update laster device information
                         this.devPkgMemberAI[i].seq = dev.seq;
                         this.devPkgMemberAI[i].mac = dev.mac;
@@ -1437,8 +1423,9 @@ async pollingLocationInfoAI(): Promise<boolean> {
                         this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi }); //update laster rxLightInfo
                         break;//break the loop
                     }
-                    else if ((this.devPkgMemberAI[i].seq - dev.seq) > 250) {
+                    else if (( this.devPkgMemberAI[i].seq-dev.seq )>127 ) {
                         //update laster device information
+
                         this.devPkgMemberAI[i].seq = dev.seq;
                         this.devPkgMemberAI[i].mac = dev.mac;
                         this.devPkgMemberAI[i].lid1 = dev.lid1;
@@ -1460,6 +1447,7 @@ async pollingLocationInfoAI(): Promise<boolean> {
                         this.devPkgMemberAI[i].rxLightInfo.push({ recLightID: dev.recLightID, rssi: dev.rssi }); //update laster rxLightInfo 
                         break;//break the loop
                     }
+                    break;
                   
 
                 }

@@ -15,6 +15,7 @@ export interface iDriver {
     bleEnable?:number;
     onOff?:number;
     cf?:number;
+    lastNetworkQueryStatus?:boolean
 }
 
 
